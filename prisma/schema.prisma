@@ -7,93 +7,396 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==================== CORE USER & ONBOARDING ====================
 model User {
-  id            String    @id @default(uuid())
-  clerkUserId   String    @unique // clerk user id
-  email         String    @unique
-  name          String?
-  imageUrl      String?
-  industry      String?    // Combined industry-subindustry (e.g., "tech-software-development")
-  industryInsight IndustryInsight? @relation(fields: [industry], references: [industry])
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String   @id @default(uuid())
+  clerkUserId String   @unique
+  email       String   @unique
+  name        String?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // Profile fields
-  bio           String?
-  experience    Int?      // Years of experience
-  
-  // Relations
-  skills        String[]  // Array of skills
-  assessments   Assessment[]
-  resume        Resume?
-  coverLetter   CoverLetter[]
+  // === ONBOARDING FIELDS (Enhanced) ===
+  educationLevel String? // diploma, graduate, post graduate, phd
+  background     String? // B.Com, B.Tech, Working, etc.
+  targetRole     String? // SDE, Data Analyst, PM, etc.
+  skills         Json? // [{skill: "React", level: "proficient"}, ...]
+
+  // === OPTIONAL PREFERENCES ===
+  targetCompanies       String[] // ["Google", "Microsoft", ...]
+  companySizePref       String? // FAANG/Big Tech, Product Companies, etc.
+  locationPref          String? // Bangalore, Remote, USA, etc.
+  internshipInterest    String[] // ["GSoC", "Outreachy", "Company"]
+  certificationInterest Boolean? @default(false)
+
+  // === RELATIONS ===
+  roadmap            Roadmap?
+  resumes            Resume[]
+  assessments        Assessment[]
+  interviews         Interview[]
+  activities         UserActivity[]
+  savedOpportunities SavedOpportunity[] // ADDED: Relation to SavedOpportunity
+  certifications     UserCertification[]
+  progressMilestones ProgressMilestone[] // ADDED: Relation to ProgressMilestone
+  jobAlerts          JobAlert[] // ADDED: Relation to JobAlert
+  weeklyInsights     WeeklyInsight[] // ADDED: Relation to WeeklyInsight
+  userSkills         UserSkill[] // ADDED: Relation to UserSkill
+
+  @@index([clerkUserId])
+  @@index([email])
+  @@index([targetRole])
 }
 
-model Assessment {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id])
-  quizScore     Float     // Overall quiz score
-  questions     Json[]    // Array of {question, answer, userAnswer, isCorrect}
-  category      String    // "Technical", "Behavioral", etc.
-  improvementTip String?  // AI-generated improvement tip
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+// ==================== AI ROADMAP MODULE ====================
+model Roadmap {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-}
+  // === AI-GENERATED CONTENT ===
+  title            String @default("Personalized Career Roadmap")
+  skillGapAnalysis Json? // AI analysis of skill gaps
+  weeklyPlan       Json[] // [{week: 1, topics: [], resources: []}, ...]
+  progress         Float  @default(0.0) // 0-100%
 
-model Resume {
-  id          String    @id @default(cuid())
-  userId      String    @unique    // One resume per user
-  user        User      @relation(fields: [userId], references: [id])
-  content     String    @db.Text // Markdown content
-  atsScore    Float?
-  feedback    String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
+  // === COMPANY-SPECIFIC PREP ===
+  companyPrep        Json? // {"Google": {focus: "DSA", timeline: "3 months"}, ...}
+  certificationRecs  String[] // ["AWS Certified Developer", ...]
+  internshipTimeline Json? // {"GSoC": "Start Jan", "TCS NQT": "3 weeks before"}
 
-model CoverLetter {
-  id              String    @id @default(cuid())
-  userId          String
-  user            User      @relation(fields: [userId], references: [id])
-  content         String    // Markdown content
-  jobDescription  String?
-  companyName     String    // Name of the company applying to
-  jobTitle        String    // Position applying for
-  status          String    @default("draft") // draft, completed
+  // === TRACKING ===
+  currentWeek    Int   @default(1)
+  completedWeeks Int[] // [1, 2, 3] - weeks completed
+  milestones     Json? // Milestones achieved
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  lastAIGenerated DateTime? // When AI last updated roadmap
 
   @@index([userId])
 }
 
-// Combined Industry Trends and Salary Insights
-model IndustryInsight {
-  id            String    @id @default(cuid())
-  industry      String    @unique  // The industry this data belongs to (e.g., "tech-software-development")
-  
-  // Users in this industry
-  users         User[]
-  
-  // Salary data
-  salaryRanges  Json[]    // Array of { role: string, min: float, max: float, median: float, location: string? }
-  
-  // Industry trends
-  growthRate    Float     // Industry growth rate
-  demandLevel   String    // "High", "Medium", "Low"
-  topSkills     String[]  // Most in-demand skills
-  
-  // Market conditions
-  marketOutlook String    // "Positive", "Neutral", "Negative"
-  keyTrends     String[]  // Array of current industry trends
-  
-  // Learning suggestions
-  recommendedSkills String[]  // Skills recommended for the industry
-  
-  lastUpdated   DateTime  @default(now())
-  nextUpdate    DateTime  // Scheduled update time
+// ==================== RESUME ANALYSIS MODULE ====================
+model Resume {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([industry])
+  // === FILE INFO ===
+  fileName String
+  fileUrl  String
+  fileSize Int
+  fileType String // pdf, docx
+
+  // === AI ANALYSIS ===
+  aiScore    Float? // 0-100 score
+  atsScore   Float? // ATS compatibility score
+  strengths  String[] // AI-identified strengths
+  weaknesses String[] // Areas for improvement
+
+  // === COMPANY-SPECIFIC FEEDBACK ===
+  companyFeedback Json? // {"Google": "Add quantified achievements", ...}
+  missingKeywords String[] // Keywords missing from job descriptions
+
+  // === OPTIMIZED VERSIONS ===
+  optimizedGeneralUrl     String? // General optimized version
+  optimizedCompanyUrl     String? // Company-specific optimized version
+  optimizationSuggestions Json? // AI suggestions for improvement
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([aiScore])
+}
+
+// ==================== ASSESSMENT/QUIZ MODULE ====================
+model Assessment {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // === TEST INFO ===
+  title         String // "Google-style Coding", "TCS NQT Mock", "AWS Practice"
+  type          String // "coding", "aptitude", "company_specific", "certification"
+  company       String? // Google, TCS, etc. (if company-specific)
+  certification String? // AWS, etc. (if certification prep)
+
+  // === QUESTIONS & ANSWERS ===
+  questions      Json[] // Array of questions
+  userAnswers    Json? // User's answers
+  correctAnswers Json? // Correct answers
+
+  // === SCORES ===
+  score          Float? // Final score
+  totalQuestions Int
+  timeTaken      Int? // Time in seconds
+
+  // === AI ANALYSIS ===
+  weakAreas       String[] // Topics user struggled with
+  explanations    Json? // AI explanations for answers
+  recommendations Json? // Next quiz recommendations
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([company])
+  @@index([createdAt])
+}
+
+// ==================== INTERVIEW PRACTICE MODULE ====================
+model Interview {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // === INTERVIEW SETTINGS ===
+  title      String // "Google Behavioral Mock", "TCS HR Round"
+  type       String // "behavioral", "technical", "hr", "company_specific"
+  company    String? // Google, TCS, Startup, etc.
+  role       String? // SDE, Data Analyst, etc.
+  difficulty String? // easy, medium, hard
+
+  // === QUESTIONS & RESPONSES ===
+  questions     Json[] // AI-generated questions
+  userResponses Json? // User's answers (text/audio/video)
+  idealAnswers  Json? // What interviewers look for
+
+  // === AI FEEDBACK ===
+  feedback       Json? // AI-generated feedback
+  score          Float? // Overall score 0-100
+  areasToImprove String[] // Specific areas to work on
+
+  // === METADATA ===
+  duration    Int? // Interview duration in seconds
+  isCompleted Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([type])
+  @@index([company])
+}
+
+// ==================== INTERNSHIP & OPPORTUNITY TRACKER ====================
+model Opportunity {
+  id String @id @default(cuid())
+
+  // === OPPORTUNITY DETAILS ===
+  title       String
+  type        String // "internship", "job", "certification", "hackathon", "job_fair"
+  company     String?
+  description String  @db.Text
+
+  // === SPECIFIC TYPES ===
+  // For GSoC
+  isGSoC       Boolean @default(false)
+  gsocOrg      String?
+  gsocTimeline Json? // Timeline and deadlines
+
+  // For Certifications
+  isCertification Boolean   @default(false)
+  certProvider    String? // AWS, Google, Microsoft
+  examDate        DateTime?
+  cost            Float?
+
+  // === ELIGIBILITY ===
+  eligibility    String[] // ["Students", "Graduates", "0-2 years experience"]
+  skillsRequired String[]
+
+  // === DATES ===
+  applicationOpen  DateTime?
+  applicationClose DateTime?
+  postedDate       DateTime  @default(now())
+
+  // === LINKS & RESOURCES ===
+  applyLink String
+  resources String[] // Preparation resources
+
+  // === TRACKING ===
+  savedByCount Int                @default(0)
+  savedByUsers SavedOpportunity[] // ADDED: Relation to SavedOpportunity
+
+  @@index([type])
+  @@index([company])
+  @@index([applicationClose])
+  @@index([isGSoC])
+  @@index([isCertification])
+}
+
+model SavedOpportunity {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+
+  status      String    @default("interested") // interested, applied, rejected, accepted
+  appliedDate DateTime?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, opportunityId])
+  @@index([userId, status])
+}
+
+// ==================== CERTIFICATION TRACKER ====================
+model UserCertification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name     String // "AWS Certified Developer - Associate"
+  provider String // AWS, Google, Microsoft
+  status   String @default("planned") // planned, in_progress, completed
+
+  // === STUDY PLAN ===
+  studyMaterials String[] // Links to resources
+  examDate       DateTime?
+  cost           Float?
+  roiAnalysis    Json? // ROI analysis data
+
+  // === COMPLETION ===
+  completionDate DateTime?
+  certificateUrl String?
+  score          String? // Pass/Fail or actual score
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([provider])
+  @@index([status])
+}
+
+// ==================== PROGRESS TRACKING ====================
+model UserActivity {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  activityType String // "roadmap_updated", "resume_uploaded", "quiz_taken", 
+  // "interview_practiced", "opportunity_saved"
+
+  module  String // roadmap, resume, assessment, interview, opportunities
+  details Json? // Activity-specific data
+
+  score    Float? // If applicable
+  metadata Json? // Additional metadata
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([activityType])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+}
+
+model ProgressMilestone {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String // "85% ready for TCS NQT", "Completed DSA module"
+  description String @db.Text
+
+  type         String // "roadmap", "assessment", "resume", "interview"
+  targetValue  Float // Target to achieve
+  currentValue Float  @default(0)
+
+  isAchieved Boolean   @default(false)
+  achievedAt DateTime?
+
+  badge    String? // Badge name
+  xpReward Int? // Experience points
+
+  createdAt  DateTime  @default(now())
+  targetDate DateTime? // When to achieve by
+
+  @@index([userId])
+  @@index([type])
+  @@index([isAchieved])
+}
+
+// ==================== JOB ALERTS & NOTIFICATIONS ====================
+model JobAlert {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  company     String?
+  matchScore  Float // 87% match with profile
+  description String  @db.Text
+
+  // === SOURCE ===
+  source   String // "target_company", "smart_matching", "opportunity_tracker"
+  sourceId String? // ID from external source
+
+  // === STATUS ===
+  status     String  @default("new") // new, viewed, applied, dismissed
+  isNotified Boolean @default(false)
+
+  // === LINKS ===
+  applyLink   String?
+  detailsLink String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([status])
+  @@index([matchScore])
+  @@index([createdAt])
+}
+
+// ==================== DASHBOARD INSIGHTS ====================
+model WeeklyInsight {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title   String // "Weekly Progress Report"
+  summary String @db.Text // AI-generated summary
+
+  insights        Json? // Key insights and stats
+  recommendations String[] // Actionable recommendations
+
+  weekStart DateTime
+  weekEnd   DateTime
+
+  isViewed Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, weekStart])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ==================== SKILL TRACKING ====================
+model UserSkill {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  skill    String
+  level    String // basic, medium, good, proficient
+  category String? // technical, soft, domain
+
+  // === PROGRESS ===
+  confidence    Int?      @default(0) // 0-100
+  lastPracticed DateTime?
+  resourcesUsed String[] // Resources used to learn
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, skill])
+  @@index([userId])
+  @@index([skill])
 }
