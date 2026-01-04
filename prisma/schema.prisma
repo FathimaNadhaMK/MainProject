@@ -7,138 +7,103 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==================== CORE USER & ONBOARDING ====================
 model User {
-  id          String   @id @default(uuid())
-  clerkUserId String   @unique
-  email       String   @unique
-  name        String?
-  imageUrl    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // === ONBOARDING FIELDS (Enhanced) ===
-  educationLevel String? // diploma, graduate, post graduate, phd
-  background     String? // B.Com, B.Tech, Working, etc.
-  targetRole     String? // SDE, Data Analyst, PM, etc.
-  skills         Json? // [{skill: "React", level: "proficient"}, ...]
-
-  // === OPTIONAL PREFERENCES ===
-  targetCompanies       String[] // ["Google", "Microsoft", ...]
-  companySizePref       String? // FAANG/Big Tech, Product Companies, etc.
-  locationPref          String? // Bangalore, Remote, USA, etc.
-  internshipInterest    String[] // ["GSoC", "Outreachy", "Company"]
-  certificationInterest Boolean? @default(false)
-
-  // === RELATIONS ===
-  roadmap            Roadmap?
-  resumes            Resume[]
-  assessments        Assessment[]
-  interviews         Interview[]
-  activities         UserActivity[]
-  savedOpportunities SavedOpportunity[] // ADDED: Relation to SavedOpportunity
-  certifications     UserCertification[]
-  progressMilestones ProgressMilestone[] // ADDED: Relation to ProgressMilestone
-  jobAlerts          JobAlert[] // ADDED: Relation to JobAlert
-  weeklyInsights     WeeklyInsight[] // ADDED: Relation to WeeklyInsight
-  userSkills         UserSkill[] // ADDED: Relation to UserSkill
+  id                    String              @id @default(uuid())
+  clerkUserId           String              @unique
+  email                 String              @unique
+  name                  String?
+  imageUrl              String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  background            String?
+  certificationInterest Boolean?            @default(false)
+  companySizePref       String?
+  educationLevel        String?
+  internshipInterest    String[]
+  locationPref          String?
+  targetCompanies       String[]
+  targetRole            String?
+  skills                Json?
+  assessments           Assessment[]
+  interviews            Interview[]
+  jobAlerts             JobAlert[]
+  progressMilestones    ProgressMilestone[]
+  resumes               Resume[]
+  roadmap               Roadmap?
+  savedOpportunities    SavedOpportunity[]
+  activities            UserActivity[]
+  certifications        UserCertification[]
+  userSkills            UserSkill[]
+  weeklyInsights        WeeklyInsight[]
 
   @@index([clerkUserId])
   @@index([email])
   @@index([targetRole])
 }
 
-// ==================== AI ROADMAP MODULE ====================
 model Roadmap {
-  id     String @id @default(cuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // === AI-GENERATED CONTENT ===
-  title            String @default("Personalized Career Roadmap")
-  skillGapAnalysis Json? // AI analysis of skill gaps
-  weeklyPlan       Json[] // [{week: 1, topics: [], resources: []}, ...]
-  progress         Float  @default(0.0) // 0-100%
-
-  // === COMPANY-SPECIFIC PREP ===
-  companyPrep        Json? // {"Google": {focus: "DSA", timeline: "3 months"}, ...}
-  certificationRecs  String[] // ["AWS Certified Developer", ...]
-  internshipTimeline Json? // {"GSoC": "Start Jan", "TCS NQT": "3 weeks before"}
-
-  // === TRACKING ===
-  currentWeek    Int   @default(1)
-  completedWeeks Int[] // [1, 2, 3] - weeks completed
-  milestones     Json? // Milestones achieved
-
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  lastAIGenerated DateTime? // When AI last updated roadmap
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  title              String    @default("Personalized Career Roadmap")
+  skillGapAnalysis   Json?
+  weeklyPlan         Json[]
+  progress           Float     @default(0.0)
+  companyPrep        Json?
+  certificationRecs  String[]
+  internshipTimeline Json?
+  currentWeek        Int       @default(1)
+  completedWeeks     Int[]
+  milestones         Json?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  lastAIGenerated    DateTime?
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
-// ==================== RESUME ANALYSIS MODULE ====================
 model Resume {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // === FILE INFO ===
-  fileName String
-  fileUrl  String
-  fileSize Int
-  fileType String // pdf, docx
-
-  // === AI ANALYSIS ===
-  aiScore    Float? // 0-100 score
-  atsScore   Float? // ATS compatibility score
-  strengths  String[] // AI-identified strengths
-  weaknesses String[] // Areas for improvement
-
-  // === COMPANY-SPECIFIC FEEDBACK ===
-  companyFeedback Json? // {"Google": "Add quantified achievements", ...}
-  missingKeywords String[] // Keywords missing from job descriptions
-
-  // === OPTIMIZED VERSIONS ===
-  optimizedGeneralUrl     String? // General optimized version
-  optimizedCompanyUrl     String? // Company-specific optimized version
-  optimizationSuggestions Json? // AI suggestions for improvement
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                      String   @id @default(cuid())
+  userId                  String
+  atsScore                Float?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  aiScore                 Float?
+  companyFeedback         Json?
+  fileName                String
+  fileSize                Int
+  fileType                String
+  fileUrl                 String
+  missingKeywords         String[]
+  optimizationSuggestions Json?
+  optimizedCompanyUrl     String?
+  optimizedGeneralUrl     String?
+  strengths               String[]
+  weaknesses              String[]
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([aiScore])
 }
 
-// ==================== ASSESSMENT/QUIZ MODULE ====================
 model Assessment {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // === TEST INFO ===
-  title         String // "Google-style Coding", "TCS NQT Mock", "AWS Practice"
-  type          String // "coding", "aptitude", "company_specific", "certification"
-  company       String? // Google, TCS, etc. (if company-specific)
-  certification String? // AWS, etc. (if certification prep)
-
-  // === QUESTIONS & ANSWERS ===
-  questions      Json[] // Array of questions
-  userAnswers    Json? // User's answers
-  correctAnswers Json? // Correct answers
-
-  // === SCORES ===
-  score          Float? // Final score
-  totalQuestions Int
-  timeTaken      Int? // Time in seconds
-
-  // === AI ANALYSIS ===
-  weakAreas       String[] // Topics user struggled with
-  explanations    Json? // AI explanations for answers
-  recommendations Json? // Next quiz recommendations
-
-  createdAt DateTime @default(now())
+  id              String   @id @default(cuid())
+  userId          String
+  createdAt       DateTime @default(now())
+  questions       Json[]
+  certification   String?
+  company         String?
+  correctAnswers  Json?
+  explanations    Json?
+  recommendations Json?
+  score           Float?
+  timeTaken       Int?
+  title           String
+  totalQuestions  Int
+  type            String
+  userAnswers     Json?
+  weakAreas       String[]
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([type])
@@ -146,79 +111,53 @@ model Assessment {
   @@index([createdAt])
 }
 
-// ==================== INTERVIEW PRACTICE MODULE ====================
 model Interview {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // === INTERVIEW SETTINGS ===
-  title      String // "Google Behavioral Mock", "TCS HR Round"
-  type       String // "behavioral", "technical", "hr", "company_specific"
-  company    String? // Google, TCS, Startup, etc.
-  role       String? // SDE, Data Analyst, etc.
-  difficulty String? // easy, medium, hard
-
-  // === QUESTIONS & RESPONSES ===
-  questions     Json[] // AI-generated questions
-  userResponses Json? // User's answers (text/audio/video)
-  idealAnswers  Json? // What interviewers look for
-
-  // === AI FEEDBACK ===
-  feedback       Json? // AI-generated feedback
-  score          Float? // Overall score 0-100
-  areasToImprove String[] // Specific areas to work on
-
-  // === METADATA ===
-  duration    Int? // Interview duration in seconds
-  isCompleted Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  userId         String
+  title          String
+  type           String
+  company        String?
+  role           String?
+  difficulty     String?
+  questions      Json[]
+  userResponses  Json?
+  idealAnswers   Json?
+  feedback       Json?
+  score          Float?
+  areasToImprove String[]
+  duration       Int?
+  isCompleted    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([type])
   @@index([company])
 }
 
-// ==================== INTERNSHIP & OPPORTUNITY TRACKER ====================
 model Opportunity {
-  id String @id @default(cuid())
-
-  // === OPPORTUNITY DETAILS ===
-  title       String
-  type        String // "internship", "job", "certification", "hackathon", "job_fair"
-  company     String?
-  description String  @db.Text
-
-  // === SPECIFIC TYPES ===
-  // For GSoC
-  isGSoC       Boolean @default(false)
-  gsocOrg      String?
-  gsocTimeline Json? // Timeline and deadlines
-
-  // For Certifications
-  isCertification Boolean   @default(false)
-  certProvider    String? // AWS, Google, Microsoft
-  examDate        DateTime?
-  cost            Float?
-
-  // === ELIGIBILITY ===
-  eligibility    String[] // ["Students", "Graduates", "0-2 years experience"]
-  skillsRequired String[]
-
-  // === DATES ===
+  id               String             @id @default(cuid())
+  title            String
+  type             String
+  company          String?
+  description      String
+  isGSoC           Boolean            @default(false)
+  gsocOrg          String?
+  gsocTimeline     Json?
+  isCertification  Boolean            @default(false)
+  certProvider     String?
+  examDate         DateTime?
+  cost             Float?
+  eligibility      String[]
+  skillsRequired   String[]
   applicationOpen  DateTime?
   applicationClose DateTime?
-  postedDate       DateTime  @default(now())
-
-  // === LINKS & RESOURCES ===
-  applyLink String
-  resources String[] // Preparation resources
-
-  // === TRACKING ===
-  savedByCount Int                @default(0)
-  savedByUsers SavedOpportunity[] // ADDED: Relation to SavedOpportunity
+  postedDate       DateTime           @default(now())
+  applyLink        String
+  resources        String[]
+  savedByCount     Int                @default(0)
+  savedByUsers     SavedOpportunity[]
 
   @@index([type])
   @@index([company])
@@ -230,66 +169,51 @@ model Opportunity {
 model SavedOpportunity {
   id            String      @id @default(cuid())
   userId        String
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   opportunityId String
+  status        String      @default("interested")
+  appliedDate   DateTime?
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
-
-  status      String    @default("interested") // interested, applied, rejected, accepted
-  appliedDate DateTime?
-  notes       String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, opportunityId])
   @@index([userId, status])
 }
 
-// ==================== CERTIFICATION TRACKER ====================
 model UserCertification {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  name     String // "AWS Certified Developer - Associate"
-  provider String // AWS, Google, Microsoft
-  status   String @default("planned") // planned, in_progress, completed
-
-  // === STUDY PLAN ===
-  studyMaterials String[] // Links to resources
+  id             String    @id @default(cuid())
+  userId         String
+  name           String
+  provider       String
+  status         String    @default("planned")
+  studyMaterials String[]
   examDate       DateTime?
   cost           Float?
-  roiAnalysis    Json? // ROI analysis data
-
-  // === COMPLETION ===
+  roiAnalysis    Json?
   completionDate DateTime?
   certificateUrl String?
-  score          String? // Pass/Fail or actual score
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  score          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([provider])
   @@index([status])
 }
 
-// ==================== PROGRESS TRACKING ====================
 model UserActivity {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  activityType String // "roadmap_updated", "resume_uploaded", "quiz_taken", 
-  // "interview_practiced", "opportunity_saved"
-
-  module  String // roadmap, resume, assessment, interview, opportunities
-  details Json? // Activity-specific data
-
-  score    Float? // If applicable
-  metadata Json? // Additional metadata
-
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  userId       String
+  activityType String
+  module       String
+  details      Json?
+  score        Float?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([activityType])
@@ -298,55 +222,41 @@ model UserActivity {
 }
 
 model ProgressMilestone {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  title       String // "85% ready for TCS NQT", "Completed DSA module"
-  description String @db.Text
-
-  type         String // "roadmap", "assessment", "resume", "interview"
-  targetValue  Float // Target to achieve
-  currentValue Float  @default(0)
-
-  isAchieved Boolean   @default(false)
-  achievedAt DateTime?
-
-  badge    String? // Badge name
-  xpReward Int? // Experience points
-
-  createdAt  DateTime  @default(now())
-  targetDate DateTime? // When to achieve by
+  id           String    @id @default(cuid())
+  userId       String
+  title        String
+  description  String
+  type         String
+  targetValue  Float
+  currentValue Float     @default(0)
+  isAchieved   Boolean   @default(false)
+  achievedAt   DateTime?
+  badge        String?
+  xpReward     Int?
+  createdAt    DateTime  @default(now())
+  targetDate   DateTime?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([type])
   @@index([isAchieved])
 }
 
-// ==================== JOB ALERTS & NOTIFICATIONS ====================
 model JobAlert {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  id          String   @id @default(cuid())
+  userId      String
   title       String
   company     String?
-  matchScore  Float // 87% match with profile
-  description String  @db.Text
-
-  // === SOURCE ===
-  source   String // "target_company", "smart_matching", "opportunity_tracker"
-  sourceId String? // ID from external source
-
-  // === STATUS ===
-  status     String  @default("new") // new, viewed, applied, dismissed
-  isNotified Boolean @default(false)
-
-  // === LINKS ===
+  matchScore  Float
+  description String
+  source      String
+  sourceId    String?
+  status      String   @default("new")
+  isNotified  Boolean  @default(false)
   applyLink   String?
   detailsLink String?
-
-  createdAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
@@ -354,47 +264,36 @@ model JobAlert {
   @@index([createdAt])
 }
 
-// ==================== DASHBOARD INSIGHTS ====================
 model WeeklyInsight {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  title   String // "Weekly Progress Report"
-  summary String @db.Text // AI-generated summary
-
-  insights        Json? // Key insights and stats
-  recommendations String[] // Actionable recommendations
-
-  weekStart DateTime
-  weekEnd   DateTime
-
-  isViewed Boolean @default(false)
-
-  createdAt DateTime @default(now())
+  id              String   @id @default(cuid())
+  userId          String
+  title           String
+  summary         String
+  insights        Json?
+  recommendations String[]
+  weekStart       DateTime
+  weekEnd         DateTime
+  isViewed        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, weekStart])
   @@index([userId])
   @@index([createdAt])
 }
 
-// ==================== SKILL TRACKING ====================
 model UserSkill {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  skill    String
-  level    String // basic, medium, good, proficient
-  category String? // technical, soft, domain
-
-  // === PROGRESS ===
-  confidence    Int?      @default(0) // 0-100
+  id            String    @id @default(cuid())
+  userId        String
+  skill         String
+  level         String
+  category      String?
+  confidence    Int?      @default(0)
   lastPracticed DateTime?
-  resourcesUsed String[] // Resources used to learn
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  resourcesUsed String[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, skill])
   @@index([userId])
