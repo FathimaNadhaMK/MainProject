@@ -35,6 +35,7 @@ model User {
   certifications        UserCertification[]
   userSkills            UserSkill[]
   weeklyInsights        WeeklyInsight[]
+  industry        String? 
 
   @@index([clerkUserId])
   @@index([email])
