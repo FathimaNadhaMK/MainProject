@@ -63,6 +63,29 @@ model Roadmap {
   @@index([userId])
 }
 
+model IndustryInsight {
+  id                String   @id @default(cuid())
+  industry          String   @unique
+  overview          String   @db.Text
+  marketSize        String?
+  growthRate        Float?
+  averageSalary     String?
+  trendingSkills    String[]
+  emergingRoles     String[]
+  topCompanies      String[]
+  certifications    String[]
+  learningResources String[]
+  challenges        String[]
+  opportunities     String[]
+  aiInsights        Json?
+  
+  lastUpdated DateTime @default(now()) @updatedAt
+  nextUpdate  DateTime?
+  createdAt   DateTime @default(now())
+  
+  @@index([industry])
+}
+
 model Resume {
   id                      String   @id @default(cuid())
   userId                  String

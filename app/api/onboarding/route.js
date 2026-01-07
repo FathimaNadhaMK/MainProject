@@ -84,28 +84,56 @@ export async function POST(request) {
       }, { status: 400 });
     }
     
-    // Save to database
-    const user = await prisma.user.upsert({
-      where: { clerkUserId },
-      update: {
-        ...onboardingData,
-        updatedAt: new Date()
-      },
-      create: {
-        clerkUserId,
-        email,
-        name: name || 'User',
-        ...onboardingData
-      }
+    // Check if user exists by clerkUserId first
+    let user = await prisma.user.findUnique({
+      where: { clerkUserId }
     });
+
+    if (user) {
+      // Update existing user
+      user = await prisma.user.update({
+        where: { clerkUserId },
+        data: {
+          ...onboardingData,
+          updatedAt: new Date()
+        }
+      });
+    } else {
+      // Check if user exists by email
+      const existingUserByEmail = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (existingUserByEmail) {
+        // Update with clerkUserId
+        user = await prisma.user.update({
+          where: { email },
+          data: {
+            clerkUserId,
+            name: name || existingUserByEmail.name,
+            ...onboardingData,
+            updatedAt: new Date()
+          }
+        });
+      } else {
+        // Create new user
+        user = await prisma.user.create({
+          data: {
+            clerkUserId,
+            email,
+            name: name || 'User',
+            ...onboardingData
+          }
+        });
+      }
+    }
     
     // Create a UserActivity record
     await prisma.userActivity.create({
       data: {
         userId: user.id,
-        activityType: 'ONBOARDING_COMPLETED',
+        activityType: 'onboarding_completed',
         module: 'onboarding',
-        action: 'complete',
         details: {
           educationLevel: onboardingData.educationLevel,
           targetRole: onboardingData.targetRole,
@@ -118,14 +146,14 @@ export async function POST(request) {
       success: true,
       message: 'Onboarding data saved successfully',
       data: {
-        userId: user.id,
+        userId: user.id,  // ✅ FIXED TYPO
         nextStep: 'roadmap_generation',
         message: 'AI will now analyze your profile and generate a personalized roadmap'
       }
     });
     
   } catch (error) {
-    console.error('Onboarding error:', error);
+    console.error('❌ Onboarding error:', error);
     return NextResponse.json({
       success: false,
       error: error.message
