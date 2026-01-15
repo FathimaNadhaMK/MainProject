@@ -6,6 +6,33 @@ import { revalidatePath } from "next/cache";
 import { generateAIInsights } from "./dashboard";
 
 // In actions/user.js - updateUser function
+// In actions/user.js - updateUser function
+export async function resetUserIndustry() {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const user = await db.user.findUnique({
+    where: { clerkUserId: userId },
+  });
+
+  if (!user) throw new Error("User not found");
+
+  await db.user.update({
+    where: { clerkUserId: userId },
+    data: { industry: null },
+  });
+
+  if (user.industry) {
+    await db.industryInsight.deleteMany({
+      where: { industry: user.industry },
+    });
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/onboarding");
+
+  return { success: true };
+}
 
 export async function updateUser(data) {
   const { userId: clerkUserId } = await auth();
