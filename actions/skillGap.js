@@ -3,6 +3,20 @@
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 
+function normalizeSkill(s) {
+  if (!s) return "";
+
+  // Handle objects like { name: "Python" } or { label: "Python" }
+  if (typeof s === "object") {
+    s = s.name || s.label || JSON.stringify(s);
+  }
+
+  return String(s)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+
 export async function generateSkillGap() {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
@@ -40,13 +54,11 @@ User skills: ${user.skills.join(", ")}
 
 Task:
 1. List top 10 required skills for this industry
-2. Identify missing skills
-3. Give a short improvement summary
+2. Give a short improvement summary
 
 Return ONLY valid JSON:
 {
   "requiredSkills": [],
-  "missingSkills": [],
   "summary": ""
 }
 `
@@ -78,11 +90,35 @@ Return ONLY valid JSON:
     throw new Error("Skill gap parsing failed");
   }
 
+  // 🔥 SMART MATCHING LOGIC
+const userSkillsNormalized = (user.skills || [])
+  .filter(Boolean)
+  .map(normalizeSkill);
+
+
+  const matchedSkills = [];
+  const missingSkills = [];
+
+  for (const reqSkill of ai.requiredSkills || []) {
+    const reqNorm = normalizeSkill(reqSkill);
+
+    const isMatched = userSkillsNormalized.some(userSkill =>
+      reqNorm.includes(userSkill) || userSkill.includes(reqNorm)
+    );
+
+    if (isMatched) {
+      matchedSkills.push(reqSkill);
+    } else {
+      missingSkills.push(reqSkill);
+    }
+  }
+
   return {
     industry: user.industry,
     userSkills: user.skills,
     requiredSkills: ai.requiredSkills || [],
-    missingSkills: ai.missingSkills || [],
+    matchedSkills,
+    missingSkills,
     summary: ai.summary || "No summary generated",
   };
 }
