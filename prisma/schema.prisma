@@ -24,6 +24,7 @@ model User {
   targetCompanies       String[]
   targetRole            String?
   skills                Json?
+  industry              String?
   assessments           Assessment[]
   interviews            Interview[]
   jobAlerts             JobAlert[]
@@ -35,7 +36,6 @@ model User {
   certifications        UserCertification[]
   userSkills            UserSkill[]
   weeklyInsights        WeeklyInsight[]
-  industry        String? 
 
   @@index([clerkUserId])
   @@index([email])
@@ -64,9 +64,9 @@ model Roadmap {
 }
 
 model IndustryInsight {
-  id                String   @id @default(cuid())
-  industry          String   @unique
-  overview          String   @db.Text
+  id                String    @id @default(cuid())
+  industry          String
+  overview          String
   marketSize        String?
   growthRate        Float?
   averageSalary     String?
@@ -78,12 +78,14 @@ model IndustryInsight {
   challenges        String[]
   opportunities     String[]
   aiInsights        Json?
-  
-  lastUpdated DateTime @default(now()) @updatedAt
-  nextUpdate  DateTime?
-  createdAt   DateTime @default(now())
-  
+  lastUpdated       DateTime  @default(now()) @updatedAt
+  nextUpdate        DateTime?
+  createdAt         DateTime  @default(now())
+  targetRole        String?
+
+  @@unique([industry, targetRole])
   @@index([industry])
+  @@index([targetRole])
 }
 
 model Resume {

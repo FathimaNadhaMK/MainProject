@@ -1,26 +1,58 @@
 "use server";
 
 import { db } from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { generateAIInsights } from "./dashboard";
+import { checkUser } from "@/lib/checkUser";
 
 // In actions/user.js - updateUser function
+// In actions/user.js - updateUser function
+export async function resetUserIndustry() {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const user = await db.user.findUnique({
+    where: { clerkUserId: userId },
+  });
+
+  if (!user) throw new Error("User not found");
+
+  await db.user.update({
+    where: { clerkUserId: userId },
+    data: { industry: null },
+  });
+
+  if (user.industry) {
+    await db.industryInsight.deleteMany({
+      where: { industry: user.industry },
+    });
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/onboarding");
+
+  return { success: true };
+}
 
 export async function updateUser(data) {
   const { userId: clerkUserId } = await auth();
   if (!clerkUserId) throw new Error("Unauthorized");
 
   try {
-    const existingUser = await db.user.findUnique({
+    let existingUser = await db.user.findUnique({
       where: { clerkUserId },
     });
 
-    if (!existingUser) throw new Error("User not found");
+    if (!existingUser) {
+      existingUser = await checkUser();
+    }
+
+    if (!existingUser) throw new Error("User not found after sync");
 
     // Build update data
     const updateData = {};
-    
+
     if (data.industry !== undefined) updateData.industry = data.industry;
     if (data.skills !== undefined) updateData.skills = data.skills;
     if (data.name !== undefined) updateData.name = data.name;
@@ -32,7 +64,7 @@ export async function updateUser(data) {
     if (data.internshipInterest !== undefined) updateData.internshipInterest = data.internshipInterest;
     if (data.certificationInterest !== undefined) updateData.certificationInterest = data.certificationInterest;
     if (data.background !== undefined) updateData.background = data.background;
-    
+
     // Simple update without transaction
     const updatedUser = await db.user.update({
       where: {
@@ -44,7 +76,7 @@ export async function updateUser(data) {
     revalidatePath("/dashboard");
     revalidatePath("/profile");
     revalidatePath("/");
-    
+
     return updatedUser;
   } catch (error) {
     console.error("Error updating user:", error.message);
@@ -57,23 +89,41 @@ export async function getUserOnboardingStatus() {
   if (!clerkUserId) throw new Error("Unauthorized");
 
   try {
-    const user = await db.user.findUnique({
-      where: {
-        clerkUserId,
-      },
+    let user = await db.user.findUnique({
+      where: { clerkUserId },
       select: {
         id: true,
         industry: true,
         name: true,
         email: true,
         targetRole: true,
+        roadmap: {
+          select: { id: true }
+        }
       },
     });
 
-    if (!user) throw new Error("User not found");
+    if (!user) {
+      await checkUser();
+      user = await db.user.findUnique({
+        where: { clerkUserId },
+        select: {
+          id: true,
+          industry: true,
+          name: true,
+          email: true,
+          targetRole: true,
+          roadmap: {
+            select: { id: true }
+          }
+        },
+      });
+    }
 
-    // Check if user has completed minimal onboarding
-    const isOnboarded = !!(user.industry && user.name && user.email);
+    if (!user) throw new Error("User not found after sync");
+
+    // Check if user has completed minimal onboarding including roadmap generation
+    const isOnboarded = !!(user.industry && user.name && user.email && user.targetRole && user.roadmap);
 
     return {
       isOnboarded,
@@ -142,7 +192,7 @@ export async function getIndustryInsights(industry) {
     if (!user) throw new Error("User not found");
 
     const industryToQuery = industry || user.industry;
-    
+
     if (!industryToQuery) {
       return null;
     }

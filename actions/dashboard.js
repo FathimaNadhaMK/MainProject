@@ -2,110 +2,87 @@
 
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export const generateAIInsights = async (industry) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  
-  const prompt = `Analyze the current state of the ${industry} industry and provide insights in ONLY the following JSON format without any additional notes or explanations:
-{
-  "overview": "A comprehensive overview of the industry (2-3 paragraphs)",
-  "marketSize": "string describing market size",
-  "growthRate": 8.5,
-  "averageSalary": "string with salary range",
-  "trendingSkills": ["skill1", "skill2", "skill3", "skill4", "skill5"],
-  "emergingRoles": ["role1", "role2", "role3", "role4", "role5"],
-  "topCompanies": ["company1", "company2", "company3", "company4", "company5"],
-  "certifications": ["cert1", "cert2", "cert3", "cert4", "cert5"],
-  "learningResources": ["resource1", "resource2", "resource3", "resource4", "resource5"],
-  "challenges": ["challenge1", "challenge2", "challenge3", "challenge4", "challenge5"],
-  "opportunities": ["opportunity1", "opportunity2", "opportunity3", "opportunity4", "opportunity5"],
-  "aiInsights": {
-    "salaryRanges": [
-      { "role": "Junior", "min": 40000, "max": 60000, "median": 50000, "location": "Global" },
-      { "role": "Mid-level", "min": 60000, "max": 90000, "median": 75000, "location": "Global" },
-      { "role": "Senior", "min": 90000, "max": 130000, "median": 110000, "location": "Global" },
-      { "role": "Lead", "min": 120000, "max": 170000, "median": 145000, "location": "Global" },
-      { "role": "Principal", "min": 150000, "max": 220000, "median": 185000, "location": "Global" }
-    ],
-    "demandLevel": "High",
-    "marketOutlook": "Positive",
-    "keyTrends": ["trend1", "trend2", "trend3", "trend4", "trend5"],
-    "recommendedSkills": ["skill1", "skill2", "skill3", "skill4", "skill5"]
-  }
-}
+export async function generateAIInsights(userData) {
+  if (!userData || !userData.industry) throw new Error("Industry data required");
 
-IMPORTANT: Return ONLY the JSON. No additional text, notes, or markdown formatting.`;
+  console.log("🔥 Gemini generating for industry:", userData.industry);
 
   try {
-    // Using the REST API directly with v1beta
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    // Use gemini-2.5-flash as gemini-pro is deprecated and flash is faster
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const prompt = `
+      You are a senior career advisor, hiring strategist, and labor market analyst.
+      
+      Generate HIGHLY PERSONALIZED, PRACTICAL career insights for the following profile:
+      
+      USER PROFILE:
+      - Industry: ${userData.industry}
+      - Experience: ${userData.experience ?? 0} years
+      - Education: ${userData.educationLevel || "Not specified"}
+      - Background: ${userData.background || "Not specified"}
+      - Target Role: ${userData.targetRole || "Not specified"}
+      - Skills: ${JSON.stringify(userData.skills || [])}
+
+      OUTPUT FORMAT (JSON ONLY):
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
+        "overview": "Concise industry summary",
+        "marketSize": "Market size estimate",
+        "growthRate": 15,
+        "averageSalary": "$80k-120k",
+        "trendingSkills": ["skill1", "skill2"],
+        "emergingRoles": ["role1", "role2"],
+        "topCompanies": ["company1", "company2"],
+        "certifications": ["cert1", "cert2"],
+        "learningResources": ["resource1", "resource2"],
+        "challenges": ["challenge1", "challenge2"],
+        "opportunities": ["opportunity1", "opportunity2"],
+        "aiInsights": {
+          "salaryRanges": [
+             { "role": "Role Name", "min": 60000, "max": 90000, "median": 75000, "location": "Global" }
           ],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 2048,
-          },
-        }),
+          "demandLevel": "High", 
+          "marketOutlook": "Positive", 
+          "keyTrends": ["trend1", "trend2"],
+          "recommendedSkills": ["skill1", "skill2"]
+        }
       }
-    );
+    `;
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Gemini API Error:", errorData);
-      throw new Error(`Gemini API Error: ${response.status} - ${JSON.stringify(errorData)}`);
-    }
-
-    const data = await response.json();
-    const text = data.candidates[0].content.parts[0].text;
-    const cleanedText = text.replace(/```(?:json)?\n?/g, "").trim();
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    const cleanedText = text.replace(/```json/g, "").replace(/```/g, "").trim();
 
     return JSON.parse(cleanedText);
   } catch (error) {
-    console.error("Error generating AI insights:", error);
-    
-    // Fallback: Return mock data if API fails
+    console.error("❌ Gemini API error:", error);
+    // Fallback Mock Data
     return {
-      overview: `The ${industry} industry is a dynamic and growing sector with significant opportunities for professionals. This industry continues to evolve with technological advancements and changing market demands. Career prospects remain strong with competitive compensation and diverse role options.`,
-      marketSize: "Large and growing market",
-      growthRate: 7.5,
-      averageSalary: "$60,000 - $120,000",
-      trendingSkills: ["Problem Solving", "Communication", "Technical Skills", "Adaptability", "Leadership"],
-      emergingRoles: ["Specialist", "Analyst", "Coordinator", "Manager", "Consultant"],
-      topCompanies: ["Industry Leader 1", "Industry Leader 2", "Industry Leader 3", "Industry Leader 4", "Industry Leader 5"],
-      certifications: ["Professional Certification 1", "Professional Certification 2", "Professional Certification 3", "Technical Certification 1", "Technical Certification 2"],
-      learningResources: ["Online Courses", "Industry Publications", "Professional Networks", "Workshops & Seminars", "Mentorship Programs"],
-      challenges: ["Market Competition", "Skill Gap", "Rapid Technology Changes", "Economic Fluctuations", "Work-Life Balance"],
-      opportunities: ["Career Growth", "Remote Work Options", "Global Markets", "Innovation", "Entrepreneurship"],
+      overview: "Industry insights currently unavailable (Fallback).",
+      marketSize: "N/A",
+      growthRate: 0,
+      averageSalary: "N/A",
+      trendingSkills: [],
+      emergingRoles: [],
+      topCompanies: [],
+      certifications: [],
+      learningResources: [],
+      challenges: [],
+      opportunities: [],
       aiInsights: {
-        salaryRanges: [
-          { role: "Entry Level", min: 40000, max: 60000, median: 50000, location: "Global" },
-          { role: "Mid-Level", min: 60000, max: 90000, median: 75000, location: "Global" },
-          { role: "Senior", min: 90000, max: 130000, median: 110000, location: "Global" },
-          { role: "Lead", min: 120000, max: 170000, median: 145000, location: "Global" },
-          { role: "Principal", min: 150000, max: 220000, median: 185000, location: "Global" }
-        ],
-        demandLevel: "High",
-        marketOutlook: "Positive",
-        keyTrends: ["Digital Transformation", "Remote Work", "Automation", "Sustainability", "Data-Driven Decisions"],
-        recommendedSkills: ["Critical Thinking", "Digital Literacy", "Communication", "Collaboration", "Technical Expertise"]
+        salaryRanges: [],
+        demandLevel: "Unknown",
+        marketOutlook: "Neutral",
+        keyTrends: [],
+        recommendedSkills: []
       }
     };
   }
-};
+}
 
 export async function getIndustryInsights() {
   const { userId } = await auth();
@@ -115,37 +92,64 @@ export async function getIndustryInsights() {
     where: { clerkUserId: userId },
   });
 
-  if (!user) throw new Error("User not found");
-  if (!user.industry) throw new Error("User industry not set");
+  if (!user?.industry) throw new Error("Industry not set");
 
-  // Check if insights already exist for this industry
-  let industryInsight = await db.industryInsight.findUnique({
-    where: { industry: user.industry },
-  });
+  // Generate AI once per request
+  const ai = await generateAIInsights(user);
 
-  // If no insights exist, generate them
-  if (!industryInsight) {
-    const insights = await generateAIInsights(user.industry);
+  try {
+    const insight = await db.industryInsight.upsert({
+   where: {
+  industry_targetRole: {
+    industry: user.industry,
+    targetRole: user.targetRole || "general"
+  }
+},
 
-    industryInsight = await db.industryInsight.create({
-      data: {
+      update: {
+        overview: ai.overview,
+        marketSize: ai.marketSize,
+        growthRate: ai.growthRate,
+        averageSalary: ai.averageSalary,
+        trendingSkills: ai.trendingSkills,
+        emergingRoles: ai.emergingRoles,
+        topCompanies: ai.topCompanies,
+        certifications: ai.certifications,
+        learningResources: ai.learningResources,
+        challenges: ai.challenges,
+        opportunities: ai.opportunities,
+        aiInsights: ai.aiInsights,
+        lastUpdated: new Date(),
+        nextUpdate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+      create: {
         industry: user.industry,
-        overview: insights.overview,
-        marketSize: insights.marketSize,
-        growthRate: insights.growthRate,
-        averageSalary: insights.averageSalary,
-        trendingSkills: insights.trendingSkills,
-        emergingRoles: insights.emergingRoles,
-        topCompanies: insights.topCompanies,
-        certifications: insights.certifications,
-        learningResources: insights.learningResources,
-        challenges: insights.challenges,
-        opportunities: insights.opportunities,
-        aiInsights: insights.aiInsights,
-        nextUpdate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+        overview: ai.overview,
+        marketSize: ai.marketSize,
+        growthRate: ai.growthRate,
+        averageSalary: ai.averageSalary,
+        trendingSkills: ai.trendingSkills,
+        emergingRoles: ai.emergingRoles,
+        topCompanies: ai.topCompanies,
+        certifications: ai.certifications,
+        learningResources: ai.learningResources,
+        challenges: ai.challenges,
+        opportunities: ai.opportunities,
+        aiInsights: ai.aiInsights,
+        lastUpdated: new Date(),
+        nextUpdate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
-  }
 
-  return industryInsight;
+    return insight;
+  } catch (error) {
+    if (error.code === 'P2002') {
+      // If we still get a unique constraint error due to rare race condition,
+      // just fetch the existing record.
+      return await db.industryInsight.findUnique({
+        where: { industry: user.industry },
+      });
+    }
+    throw error;
+  }
 }

@@ -8,7 +8,10 @@ const isProtectedRoute = createRouteMatcher([
   "/interview(.*)",
   "/ai-cover-letter(.*)",
   "/onboarding(.*)",
+  "/skill-gap(.*)",       // protect page
+  // ❌ DO NOT protect /api/skill-gap
 ]);
+
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth();
