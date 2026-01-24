@@ -25,7 +25,10 @@ export async function resetUserIndustry() {
 
   if (user.industry) {
     await db.industryInsight.deleteMany({
-      where: { industry: user.industry },
+      where: {
+        industry: user.industry,
+        targetRole: user.targetRole,
+      },
     });
   }
 

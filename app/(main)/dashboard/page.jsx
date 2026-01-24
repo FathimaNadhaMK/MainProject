@@ -17,16 +17,17 @@ export default async function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-4xl md:text-5xl font-bold gradient-title">
-            Industry Insights
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            AI-powered market analysis and career opportunities
+      <div className="mb-8">
+        <h1 className="text-6xl font-bold gradient-title mb-6">Industry Insights</h1>
+
+        <div className="space-y-4">
+          <div className="flex">
+            <DevResetButton />
+          </div>
+          <p className="text-sm text-gray-400">
+            Last updated: {new Date(insights.lastUpdated).toLocaleDateString('en-GB')}
           </p>
         </div>
-        <DevResetButton />
       </div>
 
       <DashboardView insights={insights} />

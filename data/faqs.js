@@ -27,6 +27,6 @@ export const faqs = [
   {
     question: "Can I edit the AI-generated content?",
     answer:
-      "Yes! While Sensai generates high-quality initial content, you have full control to edit and customize all generated resumes, cover letters, and other content. Our markdown editor makes it easy to refine the content to perfectly match your needs.",
+      "Yes! While Guidely generates high-quality initial content, you have full control to edit and customize all generated resumes, cover letters, and other content. Our markdown editor makes it easy to refine the content to perfectly match your needs.",
   },
 ];

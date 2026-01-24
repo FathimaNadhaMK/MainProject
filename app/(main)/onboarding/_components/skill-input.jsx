@@ -17,22 +17,203 @@ import { Badge } from "@/components/ui/badge";
 const PROFICIENCY_LEVELS = ["Basic", "Medium", "Good", "Proficient"];
 
 const COMMON_SKILLS = [
-    "JavaScript",
-    "Python",
-    "Java",
-    "React",
-    "Node.js",
-    "SQL",
-    "MongoDB",
-    "AWS",
-    "Docker",
-    "Git",
-    "TypeScript",
-    "C++",
-    "Machine Learning",
-    "Data Analysis",
-    "UI/UX Design",
+  /* =========================
+     CORE TECH / IT SKILLS
+     ========================= */
+  "JavaScript",
+  "Python",
+  "Java",
+  "C",
+  "C++",
+  "C#",
+  "Go",
+  "Rust",
+  "PHP",
+  "TypeScript",
+  "R",
+  "Kotlin",
+  "Swift",
+
+  /* =========================
+     WEB & APP DEVELOPMENT
+     ========================= */
+  "HTML",
+  "CSS",
+  "Tailwind CSS",
+  "Bootstrap",
+  "React",
+  "Next.js",
+  "Angular",
+  "Vue.js",
+  "Node.js",
+  "Express.js",
+  "REST API Development",
+  "GraphQL",
+  "WebSockets",
+  "Mobile App Development",
+  "Android Development",
+  "iOS Development",
+
+  /* =========================
+     DATABASE & DATA
+     ========================= */
+  "SQL",
+  "MySQL",
+  "PostgreSQL",
+  "MongoDB",
+  "Redis",
+  "Firebase",
+  "Data Modeling",
+  "Data Warehousing",
+  "ETL Pipelines",
+  "Data Cleaning",
+
+  /* =========================
+     CLOUD & DEVOPS
+     ========================= */
+  "AWS",
+  "Azure",
+  "Google Cloud Platform",
+  "Docker",
+  "Kubernetes",
+  "CI/CD Pipelines",
+  "Linux",
+  "Shell Scripting",
+  "Terraform",
+  "System Administration",
+
+  /* =========================
+     AI / ML / DATA SCIENCE
+     ========================= */
+  "Machine Learning",
+  "Deep Learning",
+  "Artificial Intelligence",
+  "Natural Language Processing",
+  "Computer Vision",
+  "Data Analysis",
+  "Data Science",
+  "Statistical Analysis",
+  "Predictive Modeling",
+  "Model Deployment",
+  "MLOps",
+
+  /* =========================
+     CYBERSECURITY
+     ========================= */
+  "Cybersecurity Fundamentals",
+  "Network Security",
+  "Ethical Hacking",
+  "Penetration Testing",
+  "Cryptography",
+  "Risk Assessment",
+  "Security Auditing",
+  "Compliance & Governance",
+
+  /* =========================
+     UI / UX & DESIGN
+     ========================= */
+  "UI/UX Design",
+  "User Research",
+  "Wireframing",
+  "Prototyping",
+  "Figma",
+  "Adobe XD",
+  "Design Thinking",
+  "Accessibility Design",
+
+  /* =========================
+     BUSINESS & MANAGEMENT
+     ========================= */
+  "Business Analysis",
+  "Business Strategy",
+  "Product Management",
+  "Project Management",
+  "Agile Methodology",
+  "Scrum",
+  "Stakeholder Management",
+  "Operations Management",
+  "Process Optimization",
+
+  /* =========================
+     COMMERCE & FINANCE
+     ========================= */
+  "Accounting Basics",
+  "Financial Analysis",
+  "Budgeting",
+  "Cost Management",
+  "Taxation Basics",
+  "Auditing",
+  "Corporate Finance",
+  "Investment Analysis",
+  "Risk Management",
+
+  /* =========================
+     MARKETING & SALES
+     ========================= */
+  "Digital Marketing",
+  "SEO",
+  "Content Marketing",
+  "Social Media Marketing",
+  "Email Marketing",
+  "Brand Management",
+  "Market Research",
+  "Sales Strategy",
+  "Customer Relationship Management",
+
+  /* =========================
+     ECONOMICS, GEOGRAPHY & POLITICS
+     ========================= */
+  "Economic Analysis",
+  "Public Policy Analysis",
+  "Geopolitical Awareness",
+  "International Relations",
+  "Political Analysis",
+  "Geographical Information Systems (GIS)",
+  "Sustainability Studies",
+  "Climate Impact Analysis",
+  "Urban Planning Basics",
+
+  /* =========================
+     HR & PEOPLE MANAGEMENT
+     ========================= */
+  "Talent Acquisition",
+  "Human Resource Management",
+  "Performance Management",
+  "Employee Engagement",
+  "Organizational Behavior",
+  "Payroll Management",
+
+  /* =========================
+     PERSONAL & PROFESSIONAL SKILLS
+     ========================= */
+  "Communication Skills",
+  "Public Speaking",
+  "Presentation Skills",
+  "Critical Thinking",
+  "Problem Solving",
+  "Decision Making",
+  "Leadership",
+  "Team Collaboration",
+  "Time Management",
+  "Adaptability",
+  "Emotional Intelligence",
+  "Negotiation",
+  "Conflict Resolution",
+
+  /* =========================
+     GENERAL MARKET SKILLS
+     ========================= */
+  "Analytical Thinking",
+  "Research Skills",
+  "Documentation",
+  "Report Writing",
+  "MS Excel",
+  "PowerPoint",
+  "Business Writing",
+  "Client Handling",
+  "Entrepreneurial Mindset"
 ];
+
 
 export default function SkillInput({ skills = [], onChange }) {
     const [skillName, setSkillName] = useState("");
