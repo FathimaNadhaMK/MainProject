@@ -23,11 +23,10 @@ import useFetch from "@/hooks/use-fetch";
 import { useUser } from "@clerk/nextjs";
 import { entriesToMarkdown } from "@/app/lib/helper";
 import { resumeSchema } from "@/app/lib/schema";
-import html2pdf from "html2pdf.js/dist/html2pdf.min.js";
 
 export default function ResumeBuilder({ initialContent }) {
   const [activeTab, setActiveTab] = useState("edit");
-  const [previewContent, setPreviewContent] = useState(initialContent);
+  const [previewContent, setPreviewContent] = useState(initialContent || "");
   const { user } = useUser();
   const [resumeMode, setResumeMode] = useState("preview");
 
@@ -115,6 +114,9 @@ export default function ResumeBuilder({ initialContent }) {
   const generatePDF = async () => {
     setIsGenerating(true);
     try {
+      // Dynamic import to avoid server-side execution
+      const html2pdf = (await import("html2pdf.js/dist/html2pdf.min.js")).default;
+
       const element = document.getElementById("resume-pdf");
       const opt = {
         margin: [15, 15],
@@ -127,6 +129,7 @@ export default function ResumeBuilder({ initialContent }) {
       await html2pdf().set(opt).from(element).save();
     } catch (error) {
       console.error("PDF generation error:", error);
+      toast.error("Failed to generate PDF");
     } finally {
       setIsGenerating(false);
     }
@@ -404,7 +407,7 @@ export default function ResumeBuilder({ initialContent }) {
           <div className="hidden">
             <div id="resume-pdf">
               <MDEditor.Markdown
-                source={previewContent}
+                source={previewContent || ""}
                 style={{
                   background: "white",
                   color: "black",

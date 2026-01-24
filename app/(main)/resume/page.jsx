@@ -1,12 +1,17 @@
 import { getResume } from "@/actions/resume";
-import ResumeBuilder from "./_components/resume-builder";
+import { getUserProfile } from "@/actions/user";
+import ResumePageClient from "./resume-page-client";
 
 export default async function ResumePage() {
-  const resume = await getResume();
+    const [resume, userData] = await Promise.all([
+        getResume(),
+        getUserProfile().catch(() => null), // Handle case where user might not exist
+    ]);
 
-  return (
-    <div className="container mx-auto py-6">
-      <ResumeBuilder initialContent={resume?.content} />
-    </div>
-  );
+    return (
+        <ResumePageClient
+            initialContent={resume?.content}
+            userData={userData}
+        />
+    );
 }

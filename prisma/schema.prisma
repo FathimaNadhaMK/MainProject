@@ -88,16 +88,17 @@ model IndustryInsight {
 
 model Resume {
   id                      String   @id @default(cuid())
-  userId                  String
+  userId                  String   @unique
+  content                 String?  @db.Text
   atsScore                Float?
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
   aiScore                 Float?
   companyFeedback         Json?
-  fileName                String
-  fileSize                Int
-  fileType                String
-  fileUrl                 String
+  fileName                String   @default("")
+  fileSize                Int      @default(0)
+  fileType                String   @default("")
+  fileUrl                 String   @default("")
   missingKeywords         String[]
   optimizationSuggestions Json?
   optimizedCompanyUrl     String?
