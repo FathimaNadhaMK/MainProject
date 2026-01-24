@@ -39,7 +39,7 @@ export const onboardingSchema = z.object({
   targetRole: z.string().min(1, "Target role is required"),
   targetCompanies: z.array(z.string()).optional(),
   companySizePref: z.string().optional(),
-  locationPref: z.string().optional(),
+  locationPref: z.string().min(1, "Please select a preferred location"),
   internshipInterest: z.array(z.string()).optional(),
   certificationInterest: z.boolean().optional(),
   educationLevel: z.string().min(1, "Education level is required"),

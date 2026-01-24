@@ -107,6 +107,27 @@ const BACKGROUNDS = [
   "Other",
 ];
 
+const LOCATIONS = [
+  "Remote",
+  "India",
+  "United States",
+  "United Kingdom",
+  "Germany",
+  "Canada",
+  "Australia",
+  "Singapore",
+  "UAE",
+  "Hiring Hub: Bangalore, India",
+  "Hiring Hub: Hyderabad, India",
+  "Hiring Hub: Silicon Valley, USA",
+  "Hiring Hub: London, UK",
+  "Hiring Hub: Berlin, Germany",
+  "European Union",
+  "Asia Pacific",
+  "Middle East",
+  "Other",
+];
+
 const OnboardingForm = ({ industries }) => {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -522,11 +543,27 @@ const OnboardingForm = ({ industries }) => {
                   {/* Location */}
                   <div className="space-y-2">
                     <Label className="text-gray-300">Preferred Location (Optional)</Label>
-                    <Input
-                      {...register("locationPref")}
-                      placeholder="e.g., Bangalore, Remote, USA, Europe"
-                      className="bg-gray-900 text-white border-white/10"
-                    />
+                    <Select
+                      value={watch("locationPref")}
+                      onValueChange={(v) => setValue("locationPref", v)}
+                    >
+                      <SelectTrigger className="bg-gray-900 text-white border-white/10">
+                        <SelectValue placeholder="Select preferred location" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-900 text-white max-h-[300px]">
+                        <SelectGroup>
+                          <SelectLabel>Locations</SelectLabel>
+                          {LOCATIONS.map((loc) => (
+                            <SelectItem key={loc} value={loc}>
+                              {loc}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    {errors.locationPref && (
+                      <p className="text-sm text-red-400">{errors.locationPref.message}</p>
+                    )}
                     <p className="text-xs text-gray-500">
                       Where would you like to work?
                     </p>
