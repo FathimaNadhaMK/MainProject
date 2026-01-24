@@ -17,15 +17,35 @@ export const onboardingSchema = z.object({
         .min(0, "Experience must be at least 0 years")
         .max(50, "Experience cannot exceed 50 years")
     ),
-  skills: z.string().transform((val) =>
-    val
-      ? val
-          .split(",")
-          .map((skill) => skill.trim())
-          .filter(Boolean)
-      : undefined
-  ),
+  skills: z
+    .array(
+      z.object({
+        name: z.string(),
+        level: z.string(),
+      })
+    )
+    .min(1, "Please add at least one skill")
+    .optional()
+    .or(
+      z.string().transform((val) =>
+        val
+          ? val
+            .split(",")
+            .map((skill) => ({ name: skill.trim(), level: "Medium" }))
+            .filter((s) => s.name)
+          : []
+      )
+    ),
+  targetRole: z.string().min(1, "Target role is required"),
+  targetCompanies: z.array(z.string()).optional(),
+  companySizePref: z.string().optional(),
+  locationPref: z.string().optional(),
+  internshipInterest: z.array(z.string()).optional(),
+  certificationInterest: z.boolean().optional(),
+  educationLevel: z.string().min(1, "Education level is required"),
+  background: z.string().min(1, "Background is required"),
 });
+
 
 export const contactSchema = z.object({
   email: z.string().email("Invalid email address"),
