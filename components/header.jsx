@@ -37,7 +37,21 @@ export default async function Header() {
 
         {/* Action Buttons */}
         <div className="flex items-center space-x-2 md:space-x-4">
+          
           <SignedIn>
+            {/* Skill Gap Analysis Button */}
+    <Link href="/skill-gap">
+      <Button
+        variant="outline"
+        className="hidden md:inline-flex items-center gap-2"
+      >
+        <StarsIcon className="h-4 w-4" />
+        Skill Gap Analysis
+      </Button>
+      <Button variant="ghost" className="md:hidden w-10 h-10 p-0">
+        <StarsIcon className="h-4 w-4" />
+      </Button>
+    </Link>
             <Link href="/dashboard">
               <Button
                 variant="outline"
