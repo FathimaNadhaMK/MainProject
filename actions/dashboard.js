@@ -4,6 +4,20 @@ import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import crypto from "crypto";
+import { getEngagementData } from "@/lib/engagement-engine";
+
+export async function getDashboardEngagement() {
+  const { userId: clerkUserId } = await auth();
+  if (!clerkUserId) throw new Error("Unauthorized");
+
+  const user = await db.user.findUnique({
+    where: { clerkUserId },
+  });
+
+  if (!user) throw new Error("User not found");
+
+  return await getEngagementData(user.id);
+}
 
 export async function generateAIInsights(userData) {
   if (!userData || !userData.industry) throw new Error("Industry data required");

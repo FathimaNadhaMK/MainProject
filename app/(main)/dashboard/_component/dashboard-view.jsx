@@ -31,7 +31,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
-const DashboardView = ({ insights }) => {
+const DashboardView = ({ insights, engagement }) => {
   const aiInsights = insights?.aiInsights || {};
   const salaryRanges = aiInsights?.salaryRanges || [];
 
@@ -73,6 +73,48 @@ const DashboardView = ({ insights }) => {
           </Badge>
         </div>
       </div>
+
+      {/* Engagement & Milestones Section */}
+      {engagement && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card className="md:col-span-1 bg-gradient-to-br from-blue-900/20 to-indigo-900/20 border-blue-500/20 p-6 rounded-2xl flex flex-col justify-center items-center text-center">
+            <div className="mb-4 p-4 rounded-full bg-blue-500/20 relative">
+              <span className="text-4xl">🔥</span>
+              <div className="absolute inset-0 rounded-full animate-ping bg-blue-500/10" />
+            </div>
+            <h3 className="text-3xl font-black text-white mb-1">{engagement.streak} Day</h3>
+            <p className="text-xs text-blue-300 font-bold uppercase tracking-widest">Learning Streak</p>
+          </Card>
+
+          <Card className="md:col-span-2 bg-white/5 border-white/5 p-6 rounded-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h4 className="text-lg font-bold text-white flex items-center gap-2">
+                <Award className="text-yellow-500 h-5 w-5" />
+                Achievements
+              </h4>
+              <span className="text-xs text-gray-500 font-mono">Rank #{engagement.rank} (Top {engagement.percentile}%)</span>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {engagement.badges?.map((badge, idx) => (
+                <div key={idx} className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${badge.earned ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-200' : 'bg-gray-800/50 border-white/5 text-gray-500 grayscale'}`}>
+                  <span>{badge.icon}</span>
+                  <span className="text-xs font-bold">{badge.name}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="md:col-span-1 bg-gradient-to-br from-purple-900/20 to-pink-900/20 border-purple-500/20 p-6 rounded-2xl flex flex-col justify-center">
+            <h4 className="text-xs text-purple-300 font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+              <ExternalLink className="h-3 w-3" />
+              Next Milestone
+            </h4>
+            <p className="text-sm font-medium text-white leading-relaxed">
+              {engagement.milestones?.next}
+            </p>
+          </Card>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Market Outlook Card */}

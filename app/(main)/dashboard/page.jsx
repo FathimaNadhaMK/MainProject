@@ -1,4 +1,4 @@
-import { getIndustryInsights } from "@/actions/dashboard";
+import { getIndustryInsights, getDashboardEngagement } from "@/actions/dashboard";
 import DashboardView from "./_component/dashboard-view";
 import { getUserOnboardingStatus } from "@/actions/user";
 import { redirect } from "next/navigation";
@@ -14,6 +14,7 @@ export default async function DashboardPage() {
   }
 
   const insights = await getIndustryInsights();
+  const engagement = await getDashboardEngagement();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -30,7 +31,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <DashboardView insights={insights} />
+      <DashboardView insights={insights} engagement={engagement} />
     </div>
   );
 }
