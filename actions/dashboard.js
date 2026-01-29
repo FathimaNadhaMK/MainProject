@@ -4,19 +4,12 @@ import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import crypto from "crypto";
-import { getEngagementData } from "@/lib/engagement-engine";
+import { getAchievementsData } from "./achievements";
 
 export async function getDashboardEngagement() {
-  const { userId: clerkUserId } = await auth();
-  if (!clerkUserId) throw new Error("Unauthorized");
-
-  const user = await db.user.findUnique({
-    where: { clerkUserId },
-  });
-
-  if (!user) throw new Error("User not found");
-
-  return await getEngagementData(user.id);
+  const result = await getAchievementsData();
+  if (!result.success) return null;
+  return result.data;
 }
 
 export async function generateAIInsights(userData) {

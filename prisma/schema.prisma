@@ -36,6 +36,8 @@ model User {
   certifications        UserCertification[]
   userSkills            UserSkill[]
   weeklyInsights        WeeklyInsight[]
+  achievements          UserAchievement[]
+  stats                 UserStats?
 
   @@index([clerkUserId])
   @@index([email])
@@ -326,6 +328,67 @@ model WeeklyInsight {
   @@unique([userId, weekStart])
   @@index([userId])
   @@index([createdAt])
+}
+
+// Achievement System (GitHub/LeetCode Style)
+model Achievement {
+  id              String            @id @default(cuid())
+  name            String            @unique
+  description     String
+  icon            String // Emoji or icon identifier
+  category        String // "streak", "completion", "skill", "special"
+  tier            String            @default("bronze") // "bronze", "silver", "gold", "platinum"
+  requirement     Json // Threshold and conditions
+  rarity          String            @default("common") // "common", "rare", "epic", "legendary"
+  xpReward        Int               @default(0)
+  isTimeLimited   Boolean           @default(false)
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime          @default(now())
+  userAchievements UserAchievement[]
+
+  @@index([category])
+  @@index([tier])
+  @@index([rarity])
+}
+
+model UserAchievement {
+  id             String      @id @default(cuid())
+  userId         String
+  achievementId  String
+  earnedAt       DateTime    @default(now())
+  level          Int         @default(1) // For tiered achievements
+  progress       Float       @default(0) // Current progress towards next level
+  isDisplayed    Boolean     @default(true) // Show on profile
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement    Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([achievementId])
+  @@index([earnedAt])
+}
+
+// User Stats for Gamification
+model UserStats {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  currentStreak       Int      @default(0)
+  longestStreak       Int      @default(0)
+  lastActivityDate    DateTime?
+  totalXP             Int      @default(0)
+  level               Int      @default(1)
+  weeklyGoalProgress  Float    @default(0)
+  tasksCompleted      Int      @default(0)
+  assessmentsTaken    Int      @default(0)
+  interviewsPracticed Int      @default(0)
+  certificationsEarned Int     @default(0)
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([level])
+  @@index([totalXP])
 }
 
 model UserSkill {

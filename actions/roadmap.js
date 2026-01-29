@@ -103,25 +103,30 @@ export async function generateRoadmap() {
             };
         }
 
-        // Enrich the first 4 weeks with real YouTube videos and Coursera recommendations for better UX
+        // Enrich the first 8 weeks with real YouTube videos and Coursera recommendations for better UX
         if (roadmapData.weeklyPlan) {
-            const enrichmentWeeks = roadmapData.weeklyPlan.slice(0, 4);
+            const enrichmentWeeks = roadmapData.weeklyPlan.slice(0, 8);
             await Promise.all(enrichmentWeeks.map(async (week) => {
                 if (week.tasks) {
                     await Promise.all(week.tasks.map(async (task) => {
                         // Parallel fetch YouTube, Coursera, Udemy, and Free Resources
+                        // Use week topic for better relevance instead of generic task title
+                        const searchQuery = week.topic || task.title;
                         const [videos, courseraData, udemyData, freeData] = await Promise.all([
-                            resourceFetcher.fetchYouTubeContent(task.title || week.topic, user.targetRole),
-                            resourceFetcher.fetchCourseraContent(task.title || week.topic, user.educationLevel || user.background, user.targetRole),
-                            resourceFetcher.fetchUdemyContent(task.title || week.topic, user.targetRole),
-                            resourceFetcher.fetchFreeResources(task.title || week.topic)
+                            resourceFetcher.fetchYouTubeContent(searchQuery, user.targetRole),
+                            resourceFetcher.fetchCourseraContent(searchQuery, user.educationLevel || user.background, user.targetRole),
+                            resourceFetcher.fetchUdemyContent(searchQuery, user.targetRole),
+                            resourceFetcher.fetchFreeResources(searchQuery)
                         ]);
 
                         if (videos && videos.length > 0) {
+                            console.log(`[Roadmap] Week ${week.week}: Found ${videos.length} videos for task "${task.title}"`);
                             task.resources = {
                                 ...task.resources,
                                 videos: videos
                             };
+                        } else {
+                            console.warn(`[Roadmap] Week ${week.week}: No videos found for task "${task.title}"`);
                         }
 
                         // Merge free resources into articles/documentation
@@ -373,4 +378,48 @@ async function updateRoadmapWithAdaptations(userId, adjustments) {
             }
         }
     });
+}
+
+/**
+ * Toggle a task's completion status and update achievements
+ */
+export async function toggleRoadmapTask(taskId) {
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) throw new Error("Not authenticated");
+
+    try {
+        const user = await db.user.findUnique({ where: { clerkUserId } });
+        if (!user) throw new Error("User not found");
+
+        const roadmap = await db.roadmap.findUnique({ where: { userId: user.id } });
+        if (!roadmap) throw new Error("Roadmap not found");
+
+        let completedTasks = [...(roadmap.completedTasks || [])];
+        const isCompleted = completedTasks.includes(taskId);
+
+        if (isCompleted) {
+            completedTasks = completedTasks.filter(id => id !== taskId);
+        } else {
+            completedTasks.push(taskId);
+
+            // Increment task completion stat and check achievements
+            const { incrementStat, updateUserStreak } = await import("@/lib/achievement-service");
+            await incrementStat(user.id, "tasksCompleted");
+            await updateUserStreak(user.id);
+        }
+
+        const updatedRoadmap = await db.roadmap.update({
+            where: { id: roadmap.id },
+            data: {
+                completedTasks,
+                progress: (completedTasks.length / roadmap.weeklyPlan.reduce((acc, week) => acc + (week.tasks?.length || 0), 0)) * 100
+            }
+        });
+
+        revalidatePath("/roadmap");
+        return { success: true, isCompleted: !isCompleted, progress: updatedRoadmap.progress };
+    } catch (error) {
+        console.error("Toggle task failed:", error);
+        return { error: error.message };
+    }
 }
