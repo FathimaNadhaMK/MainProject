@@ -21,9 +21,14 @@ export default function AchievementSection({ achievements, stats, streak }) {
     const earnedAchievements = achievements?.filter((a) => a.earned) || [];
     const lockedAchievements = achievements?.filter((a) => !a.earned) || [];
 
-    // Get top achievements to display
-    const displayedAchievements = earnedAchievements.slice(0, 4);
-    const nextToUnlock = lockedAchievements.slice(0, 2);
+    // Show exactly 3 slots: earned achievements first, then locked placeholders
+    const MAX_DISPLAY_SLOTS = 3;
+    const displayedEarned = earnedAchievements.slice(0, MAX_DISPLAY_SLOTS);
+    const remainingSlots = MAX_DISPLAY_SLOTS - displayedEarned.length;
+    const displayedLocked = remainingSlots > 0 ? lockedAchievements.slice(0, remainingSlots) : [];
+
+    // Get next achievement to unlock for progress bar
+    const nextToUnlock = lockedAchievements.slice(0, 1);
 
     const getTierColor = (tier) => {
         switch (tier) {
@@ -106,7 +111,7 @@ export default function AchievementSection({ achievements, stats, streak }) {
                     <div className="flex flex-wrap gap-3">
                         <TooltipProvider>
                             {/* Show message if no achievements earned */}
-                            {displayedAchievements.length === 0 && (
+                            {displayedEarned.length === 0 && (
                                 <div className="w-full text-center py-6">
                                     <p className="text-gray-400 text-sm mb-2">No achievements yet</p>
                                     <p className="text-gray-500 text-xs">Complete your first task to start earning achievements! 🎯</p>
@@ -114,7 +119,7 @@ export default function AchievementSection({ achievements, stats, streak }) {
                             )}
 
                             {/* Earned Achievements */}
-                            {displayedAchievements.map((achievement, idx) => (
+                            {displayedEarned.map((achievement, idx) => (
                                 <Tooltip key={idx}>
                                     <TooltipTrigger asChild>
                                         <motion.div
@@ -157,8 +162,8 @@ export default function AchievementSection({ achievements, stats, streak }) {
                                 </Tooltip>
                             ))}
 
-                            {/* Locked Achievements (Greyed Out) */}
-                            {nextToUnlock.map((achievement, idx) => (
+                            {/* Locked Achievement Slots */}
+                            {displayedLocked.map((achievement, idx) => (
                                 <Tooltip key={`locked-${idx}`}>
                                     <TooltipTrigger asChild>
                                         <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-gray-800/50 border-white/5 text-gray-500 grayscale opacity-50 cursor-help">

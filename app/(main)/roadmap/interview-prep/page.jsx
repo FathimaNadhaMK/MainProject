@@ -4,7 +4,14 @@ import { redirect } from "next/navigation";
 import PhaseView from "../_components/phase-view";
 
 export default async function InterviewPrepPage() {
-    const { isOnboarded } = await getUserOnboardingStatus();
+    const onboardingStatus = await getUserOnboardingStatus();
+
+    // If user is not authenticated, redirect to sign-in
+    if (!onboardingStatus) {
+        redirect("/sign-in");
+    }
+
+    const { isOnboarded } = onboardingStatus;
 
     if (!isOnboarded) {
         redirect("/onboarding");
