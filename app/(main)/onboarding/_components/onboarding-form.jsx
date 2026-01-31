@@ -263,53 +263,7 @@ const OnboardingForm = ({ industries }) => {
   const progress = (currentStep / STEPS.length) * 100;
 
   return (
-<<<<<<< HEAD
-    <div className="flex items-center justify-center bg-background">
-      <Card className="w-full max-w-lg mt-10 mx-2">
-        <CardHeader>
-          <CardTitle className="gradient-title text-4xl">
-            Complete Your Profile
-          </CardTitle>
-          <CardDescription>
-            Select your preferred domain to receive personalized guidance and insights.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="industry">Industry</Label>
-              <Select
-                onValueChange={(value) => {
-                  setValue("industry", value);
-                  setSelectedIndustry(
-                    industries.find((ind) => ind.id === value)
-                  );
-                  setValue("subIndustry", "");
-                }}
-              >
-                <SelectTrigger id="industry">
-                  <SelectValue placeholder="Select an industry" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Industries</SelectLabel>
-                    {industries.map((ind) => (
-                      <SelectItem key={ind.id} value={ind.id}>
-                        {ind.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              {errors.industry && (
-                <p className="text-sm text-red-500">
-                  {errors.industry.message}
-                </p>
-              )}
-            </div>
-=======
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-[#020617] to-black relative overflow-hidden px-4 py-8">
->>>>>>> 3699bd5df75f4230efd5c3a9c6b8352381b5fad9
 
       {/* Background glow */}
       <div className="absolute inset-0">

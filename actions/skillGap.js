@@ -72,8 +72,10 @@ Return ONLY valid JSON:
 
   if (!response.ok) {
     const err = await response.text();
-    console.error("❌ Gemini Skill Gap API error:", err);
-    throw new Error("Gemini failed");
+    console.error("❌ Gemini Skill Gap API error:");
+    console.error("Status:", response.status, response.statusText);
+    console.error("Response:", err);
+    throw new Error(`Gemini API failed: ${response.status} - ${err.substring(0, 200)}`);
   }
 
   const data = await response.json();
@@ -91,9 +93,9 @@ Return ONLY valid JSON:
   }
 
   // 🔥 SMART MATCHING LOGIC
-const userSkillsNormalized = (user.skills || [])
-  .filter(Boolean)
-  .map(normalizeSkill);
+  const userSkillsNormalized = (user.skills || [])
+    .filter(Boolean)
+    .map(normalizeSkill);
 
 
   const matchedSkills = [];
