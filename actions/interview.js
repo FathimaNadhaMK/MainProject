@@ -118,6 +118,11 @@ export async function saveQuizResult(questions, answers, score) {
       },
     });
 
+    // Update achievements and stats
+    const { incrementStat, updateUserStreak } = await import("@/lib/achievement-service");
+    await incrementStat(user.id, "assessmentsTaken");
+    await updateUserStreak(user.id);
+
     return assessment;
   } catch (error) {
     console.error("Error saving quiz result:", error);

@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { ACHIEVEMENT_DEFINITIONS } from "../lib/achievement-service.js";
 
 const prisma = new PrismaClient();
 
@@ -14,7 +15,7 @@ async function main() {
       email: "test@guidely.com",
       name: "Test User",
       imageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=test",
-      
+
       // Onboarding fields
       educationLevel: "graduate",
       background: "B.Tech in Computer Science",
@@ -25,7 +26,7 @@ async function main() {
         { skill: "Node.js", level: "medium" },
         { skill: "Python", level: "good" }
       ],
-      
+
       // Preferences
       targetCompanies: ["Google", "Microsoft", "Amazon"],
       companySizePref: "Big Tech",
@@ -36,125 +37,125 @@ async function main() {
   });
   console.log("✅ Created user:", testUser.email);
 
-// ==================== CREATE/UPDATE ROADMAP ====================
-const roadmap = await prisma.roadmap.upsert({
-  where: { userId: testUser.id },
-  update: {
-    title: "8-Week SDE Preparation Roadmap",
-    lastAIGenerated: new Date()
-  },
-  create: {  // Changed from "data" to "create"
-    userId: testUser.id,
-    title: "8-Week SDE Preparation Roadmap",
-    
-    skillGapAnalysis: {
-      strengths: ["JavaScript Fundamentals", "React Basics", "Problem Solving"],
-      gaps: ["System Design", "Advanced DSA", "Database Optimization"],
-      priority: ["System Design", "Advanced DSA", "Behavioral Interview Prep"]
+  // ==================== CREATE/UPDATE ROADMAP ====================
+  const roadmap = await prisma.roadmap.upsert({
+    where: { userId: testUser.id },
+    update: {
+      title: "8-Week SDE Preparation Roadmap",
+      lastAIGenerated: new Date()
     },
-    
-    weeklyPlan: [
-      {
-        week: 1,
-        focus: "DSA Fundamentals - Arrays & Strings",
-        topics: ["Two Pointers", "Sliding Window", "Array Manipulation"],
-        resources: ["LeetCode Easy", "NeetCode.io", "Abdul Bari Algorithms"],
-        projects: ["Implement ArrayList", "String manipulation library"]
+    create: {  // Changed from "data" to "create"
+      userId: testUser.id,
+      title: "8-Week SDE Preparation Roadmap",
+
+      skillGapAnalysis: {
+        strengths: ["JavaScript Fundamentals", "React Basics", "Problem Solving"],
+        gaps: ["System Design", "Advanced DSA", "Database Optimization"],
+        priority: ["System Design", "Advanced DSA", "Behavioral Interview Prep"]
       },
-      {
-        week: 2,
-        focus: "Linked Lists & Stacks",
-        topics: ["Singly/Doubly Linked Lists", "Stack Operations"],
-        resources: ["GeeksforGeeks", "LeetCode Medium"],
-        projects: ["LRU Cache", "Expression evaluator"]
+
+      weeklyPlan: [
+        {
+          week: 1,
+          focus: "DSA Fundamentals - Arrays & Strings",
+          topics: ["Two Pointers", "Sliding Window", "Array Manipulation"],
+          resources: ["LeetCode Easy", "NeetCode.io", "Abdul Bari Algorithms"],
+          projects: ["Implement ArrayList", "String manipulation library"]
+        },
+        {
+          week: 2,
+          focus: "Linked Lists & Stacks",
+          topics: ["Singly/Doubly Linked Lists", "Stack Operations"],
+          resources: ["GeeksforGeeks", "LeetCode Medium"],
+          projects: ["LRU Cache", "Expression evaluator"]
+        },
+        {
+          week: 3,
+          focus: "Trees & Recursion",
+          topics: ["Binary Trees", "BST", "Tree Traversals"],
+          resources: ["LeetCode Tree problems", "InterviewBit"],
+          projects: ["File system tree viewer", "BST operations"]
+        },
+        {
+          week: 4,
+          focus: "Graphs & BFS/DFS",
+          topics: ["Graph Representation", "BFS/DFS", "Shortest Path"],
+          resources: ["William Fiset Graph Theory", "LeetCode Graphs"],
+          projects: ["Social network analyzer", "Dijkstra's algorithm"]
+        },
+        {
+          week: 5,
+          focus: "Dynamic Programming",
+          topics: ["Memoization", "Tabulation", "DP Patterns"],
+          resources: ["Aditya Verma DP", "LeetCode DP"],
+          projects: ["Solve 20 DP problems", "DP pattern cheatsheet"]
+        },
+        {
+          week: 6,
+          focus: "System Design Basics",
+          topics: ["Load Balancing", "Caching", "API Design"],
+          resources: ["Grokking System Design", "ByteByteGo"],
+          projects: ["URL shortener", "Rate limiter"]
+        },
+        {
+          week: 7,
+          focus: "Advanced System Design",
+          topics: ["Microservices", "Message Queues", "CAP Theorem"],
+          resources: ["DDIA Book", "High Scalability blog"],
+          projects: ["Twitter-like system", "Notification service"]
+        },
+        {
+          week: 8,
+          focus: "Mock Interviews & Behavioral Prep",
+          topics: ["STAR Method", "Leadership Principles"],
+          resources: ["Pramp", "Amazon LP guide"],
+          projects: ["10 STAR stories", "5 mock interviews"]
+        }
+      ],
+
+      companyPrep: {
+        Google: {
+          focus: "Data Structures & Algorithms",
+          timeline: "3 months intensive prep",
+          resources: ["LeetCode Google tagged", "Google Interview Guide"]
+        },
+        Microsoft: {
+          focus: "Problem Solving & OOP",
+          timeline: "2 months",
+          resources: ["Microsoft Learn", "LeetCode Microsoft tagged"]
+        },
+        Amazon: {
+          focus: "Leadership Principles + DSA",
+          timeline: "2-3 months",
+          resources: ["Amazon LP guide", "System Design"]
+        }
       },
-      {
-        week: 3,
-        focus: "Trees & Recursion",
-        topics: ["Binary Trees", "BST", "Tree Traversals"],
-        resources: ["LeetCode Tree problems", "InterviewBit"],
-        projects: ["File system tree viewer", "BST operations"]
+
+      certificationRecs: [
+        "AWS Certified Developer - Associate",
+        "Google Cloud Associate",
+        "Microsoft Azure Fundamentals"
+      ],
+
+      internshipTimeline: {
+        GSoC: "Applications open Feb-March",
+        "TCS NQT": "Register 3 weeks before exam",
+        "Company Internships": "Start applying 6 months before"
       },
-      {
-        week: 4,
-        focus: "Graphs & BFS/DFS",
-        topics: ["Graph Representation", "BFS/DFS", "Shortest Path"],
-        resources: ["William Fiset Graph Theory", "LeetCode Graphs"],
-        projects: ["Social network analyzer", "Dijkstra's algorithm"]
+
+      progress: 12.5,
+      currentWeek: 1,
+      completedWeeks: [],
+
+      milestones: {
+        completed: ["Profile setup", "First quiz attempt"],
+        upcoming: ["Complete Week 1", "Upload resume"]
       },
-      {
-        week: 5,
-        focus: "Dynamic Programming",
-        topics: ["Memoization", "Tabulation", "DP Patterns"],
-        resources: ["Aditya Verma DP", "LeetCode DP"],
-        projects: ["Solve 20 DP problems", "DP pattern cheatsheet"]
-      },
-      {
-        week: 6,
-        focus: "System Design Basics",
-        topics: ["Load Balancing", "Caching", "API Design"],
-        resources: ["Grokking System Design", "ByteByteGo"],
-        projects: ["URL shortener", "Rate limiter"]
-      },
-      {
-        week: 7,
-        focus: "Advanced System Design",
-        topics: ["Microservices", "Message Queues", "CAP Theorem"],
-        resources: ["DDIA Book", "High Scalability blog"],
-        projects: ["Twitter-like system", "Notification service"]
-      },
-      {
-        week: 8,
-        focus: "Mock Interviews & Behavioral Prep",
-        topics: ["STAR Method", "Leadership Principles"],
-        resources: ["Pramp", "Amazon LP guide"],
-        projects: ["10 STAR stories", "5 mock interviews"]
-      }
-    ],
-    
-    companyPrep: {
-      Google: {
-        focus: "Data Structures & Algorithms",
-        timeline: "3 months intensive prep",
-        resources: ["LeetCode Google tagged", "Google Interview Guide"]
-      },
-      Microsoft: {
-        focus: "Problem Solving & OOP",
-        timeline: "2 months",
-        resources: ["Microsoft Learn", "LeetCode Microsoft tagged"]
-      },
-      Amazon: {
-        focus: "Leadership Principles + DSA",
-        timeline: "2-3 months",
-        resources: ["Amazon LP guide", "System Design"]
-      }
-    },
-    
-    certificationRecs: [
-      "AWS Certified Developer - Associate",
-      "Google Cloud Associate",
-      "Microsoft Azure Fundamentals"
-    ],
-    
-    internshipTimeline: {
-      GSoC: "Applications open Feb-March",
-      "TCS NQT": "Register 3 weeks before exam",
-      "Company Internships": "Start applying 6 months before"
-    },
-    
-    progress: 12.5,
-    currentWeek: 1,
-    completedWeeks: [],
-    
-    milestones: {
-      completed: ["Profile setup", "First quiz attempt"],
-      upcoming: ["Complete Week 1", "Upload resume"]
-    },
-    
-    lastAIGenerated: new Date()
-  }
-});
-console.log("✅ Created/Updated roadmap:", roadmap.title);
+
+      lastAIGenerated: new Date()
+    }
+  });
+  console.log("✅ Created/Updated roadmap:", roadmap.title);
 
   // ==================== CREATE OPPORTUNITIES ====================
   const opportunities = await Promise.all([
@@ -285,7 +286,7 @@ console.log("✅ Created/Updated roadmap:", roadmap.title);
       title: "JavaScript Fundamentals - Google Style",
       type: "coding",
       company: "Google",
-      
+
       questions: [
         {
           id: 1,
@@ -321,15 +322,15 @@ console.log("✅ Created/Updated roadmap:", roadmap.title);
           correctAnswer: "c"
         }
       ],
-      
+
       totalQuestions: 3,
-      
+
       explanations: {
         "1": "typeof null returns 'object' due to a legacy bug in JavaScript.",
         "2": "push() adds elements to the end and returns new length.",
         "3": "=== checks both value and type (strict equality)."
       },
-      
+
       weakAreas: [],
       recommendations: {
         nextQuiz: "Advanced JavaScript Concepts",
@@ -348,7 +349,7 @@ console.log("✅ Created/Updated roadmap:", roadmap.title);
       company: "Google",
       role: "SDE",
       difficulty: "medium",
-      
+
       questions: [
         {
           id: 1,
@@ -369,7 +370,7 @@ console.log("✅ Created/Updated roadmap:", roadmap.title);
           starFormat: true
         }
       ],
-      
+
       idealAnswers: {
         "1": {
           situation: "Clearly describe the technical problem",
@@ -378,7 +379,7 @@ console.log("✅ Created/Updated roadmap:", roadmap.title);
           result: "Quantifiable outcome"
         }
       },
-      
+
       areasToImprove: [],
       isCompleted: false
     }
@@ -393,29 +394,29 @@ console.log("✅ Created/Updated roadmap:", roadmap.title);
       fileUrl: "https://example.com/resumes/test_user_resume.pdf",
       fileSize: 245000, // 245 KB
       fileType: "pdf",
-      
+
       aiScore: 78.5,
       atsScore: 82.0,
-      
+
       strengths: [
         "Clear project descriptions",
         "Quantified achievements",
         "Relevant technical skills",
         "Good formatting"
       ],
-      
+
       weaknesses: [
         "Missing action verbs in some bullets",
         "Could add more metrics",
         "Education section could be expanded"
       ],
-      
+
       companyFeedback: {
         Google: "Add more system design projects. Highlight scalability achievements.",
         Microsoft: "Emphasize teamwork and collaboration. Add Azure experience.",
         Amazon: "Frame achievements using Leadership Principles. Add customer impact."
       },
-      
+
       missingKeywords: [
         "Microservices",
         "Cloud",
@@ -423,7 +424,7 @@ console.log("✅ Created/Updated roadmap:", roadmap.title);
         "Agile",
         "TDD"
       ],
-      
+
       optimizationSuggestions: {
         general: [
           "Add a summary section highlighting key strengths",
@@ -628,16 +629,27 @@ console.log("✅ Created/Updated roadmap:", roadmap.title);
   ]);
   console.log(`✅ Created ${jobAlerts.length} job alerts`);
 
+  // ==================== CREATE ACHIEVEMENTS ====================
+  console.log("🏆 Seeding achievements...");
+  for (const achievement of ACHIEVEMENT_DEFINITIONS) {
+    await prisma.achievement.upsert({
+      where: { name: achievement.name },
+      update: achievement,
+      create: achievement,
+    });
+  }
+  console.log(`✅ Created/Updated ${ACHIEVEMENT_DEFINITIONS.length} achievements`);
+
   // ==================== CREATE WEEKLY INSIGHT ====================
   const weekStart = new Date("2026-01-01");
   const weekEnd = new Date("2026-01-07");
-  
+
   const weeklyInsight = await prisma.weeklyInsight.create({
     data: {
       userId: testUser.id,
       title: "Weekly Progress Report - Week 1",
       summary: "Great start! You've completed profile setup, uploaded your resume, and started Week 1 of your roadmap. Your ATS score improved by 5 points.",
-      
+
       insights: {
         activitiesCompleted: 5,
         timeSpent: "8.5 hours",
@@ -645,14 +657,14 @@ console.log("✅ Created/Updated roadmap:", roadmap.title);
         assessmentsTaken: 1,
         opportunitiesSaved: 1
       },
-      
+
       recommendations: [
         "Complete remaining Week 1 topics",
         "Take 2-3 practice assessments",
         "Update resume with recent projects",
         "Apply to saved GSoC opportunity"
       ],
-      
+
       weekStart,
       weekEnd
     }
@@ -673,6 +685,7 @@ console.log("✅ Created/Updated roadmap:", roadmap.title);
   console.log(`  - Milestones: ${milestones.length}`);
   console.log(`  - Activities: ${activities.length}`);
   console.log(`  - Job Alerts: ${jobAlerts.length}`);
+  console.log(`  - Achievements: ${ACHIEVEMENT_DEFINITIONS.length}`);
   console.log(`  - Weekly Insights: 1`);
 }
 

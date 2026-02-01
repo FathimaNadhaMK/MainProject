@@ -30,8 +30,9 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import AchievementSection from "../../roadmap/_components/achievement-section";
 
-const DashboardView = ({ insights }) => {
+const DashboardView = ({ insights, engagement }) => {
   const aiInsights = insights?.aiInsights || {};
   const salaryRanges = aiInsights?.salaryRanges || [];
 
@@ -73,6 +74,15 @@ const DashboardView = ({ insights }) => {
           </Badge>
         </div>
       </div>
+
+      {/* Engagement & Milestones Section */}
+      {engagement && (
+        <AchievementSection
+          achievements={engagement.achievements}
+          stats={engagement.stats}
+          streak={engagement.streak}
+        />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Market Outlook Card */}

@@ -1,7 +1,9 @@
 import { getRoadmap } from "@/actions/roadmap";
 import { getUserOnboardingStatus } from "@/actions/user";
+import { getAchievementsData } from "@/actions/achievements";
 import { redirect } from "next/navigation";
 import RoadmapView from "./_components/roadmap-view";
+import SeedAchievementsButton from "./_components/seed-achievements-button";
 
 export default async function RoadmapPage() {
     const { isOnboarded } = await getUserOnboardingStatus();
@@ -10,7 +12,10 @@ export default async function RoadmapPage() {
         redirect("/onboarding");
     }
 
-    const roadmap = await getRoadmap();
+    const [roadmap, achievementsResult] = await Promise.all([
+        getRoadmap(),
+        getAchievementsData(),
+    ]);
 
     if (!roadmap) {
         redirect("/onboarding");
@@ -21,7 +26,16 @@ export default async function RoadmapPage() {
             <h1 className="text-4xl md:text-5xl font-bold gradient-title mb-8">
                 Your Career Roadmap
             </h1>
-            <RoadmapView roadmap={roadmap} />
+
+            {/* Temporary: Seed Achievements Button */}
+            <div className="mb-6">
+                <SeedAchievementsButton />
+            </div>
+
+            <RoadmapView
+                roadmap={roadmap}
+                achievementData={achievementsResult.success ? achievementsResult.data : null}
+            />
         </div>
     );
 }

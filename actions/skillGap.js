@@ -31,10 +31,14 @@ export async function generateSkillGap() {
     throw new Error("Skills not set");
   }
 
+  if (!user.targetRole) {
+    console.warn("⚠️ User has no targetRole set, using industry as fallback");
+  }
+
   console.log("🔥 Gemini Skill Gap generating for:", user.industry);
 
   const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent",
     {
       method: "POST",
       headers: {
@@ -115,12 +119,15 @@ Return ONLY valid JSON:
     }
   }
 
-  return {
+  const result = {
     industry: user.industry,
+    targetRole: user.targetRole || `${user.industry} Professional`,
     userSkills: user.skills,
     requiredSkills: ai.requiredSkills || [],
     matchedSkills,
     missingSkills,
     summary: ai.summary || "No summary generated",
   };
+
+  return result;
 }

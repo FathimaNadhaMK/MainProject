@@ -4,6 +4,13 @@ import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import crypto from "crypto";
+import { getAchievementsData } from "./achievements";
+
+export async function getDashboardEngagement() {
+  const result = await getAchievementsData();
+  if (!result.success) return null;
+  return result.data;
+}
 
 export async function generateAIInsights(userData) {
   if (!userData || !userData.industry) throw new Error("Industry data required");
