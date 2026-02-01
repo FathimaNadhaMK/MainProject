@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import AchievementSection from "../../roadmap/_components/achievement-section";
+
 
 const DashboardView = ({ insights, engagement }) => {
   const aiInsights = insights?.aiInsights || {};
@@ -75,14 +75,7 @@ const DashboardView = ({ insights, engagement }) => {
         </div>
       </div>
 
-      {/* Engagement & Milestones Section */}
-      {engagement && (
-        <AchievementSection
-          achievements={engagement.achievements}
-          stats={engagement.stats}
-          streak={engagement.streak}
-        />
-      )}
+
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Market Outlook Card */}
@@ -94,16 +87,18 @@ const DashboardView = ({ insights, engagement }) => {
             </div>
             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Market Status</span>
           </div>
-          <div className="flex-1 flex flex-col justify-between relative z-10">
-            <h4 className="text-2xl font-bold text-white leading-snug">
-              {marketOutlook} — <span className="text-gray-400 font-medium text-lg leading-relaxed mt-4 block">
-                {insights.overview || "Deep market integration required for technical specialization."}
-              </span>
-            </h4>
-            <div className="mt-8 pt-6 border-t border-white/5">
-              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">
-                Next Refinement: <span className="text-blue-500">{nextUpdateDistance}</span>
+          <div className="flex-1 flex flex-col justify-end pb-4 relative z-10">
+            <div className="space-y-6">
+              <h4 className="text-6xl font-black text-white tracking-tighter">
+                {marketOutlook}
+              </h4>
+              <p className="text-sm text-gray-400 leading-relaxed line-clamp-2">
+                {insights.overview || "Strong market demand with growing opportunities."}
               </p>
+              <div className="h-2.5 w-full bg-white/5 rounded-full overflow-hidden p-0.5">
+                <div className="h-full bg-gradient-to-r from-blue-500 via-indigo-400 to-purple-400 rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(59,130,246,0.3)]" style={{ width: '75%' }} />
+              </div>
+              <p className="text-[10px] text-blue-400 uppercase font-bold tracking-widest">Market Confidence Index</p>
             </div>
           </div>
         </Card>

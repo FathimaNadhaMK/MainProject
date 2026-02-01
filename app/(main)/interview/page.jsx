@@ -1,23 +1,19 @@
-import { getAssessments } from "@/actions/interview";
-import StatsCards from "./_components/stats-cards";
-import PerformanceChart from "./_components/performace-chart";
-import QuizList from "./_components/quiz-list";
+"use client";
+import { useRouter } from "next/navigation";
+import SystemCheck from "./_components/system-check";
 
-export default async function InterviewPrepPage() {
-  const assessments = await getAssessments();
+export default function InterviewHome() {
+  const router = useRouter();
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-5">
-        <h1 className="text-6xl font-bold gradient-title">
-          Interview Preparation
-        </h1>
-      </div>
-      <div className="space-y-6">
-        <StatsCards assessments={assessments} />
-        <PerformanceChart assessments={assessments} />
-        <QuizList assessments={assessments} />
-      </div>
+    <div className="p-8">
+      <h1 className="text-2xl font-bold mb-4">
+        AI Interview – System Check
+      </h1>
+
+      <SystemCheck
+        onSuccess={() => router.push("/interview/start")}
+      />
     </div>
   );
 }

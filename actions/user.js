@@ -89,7 +89,10 @@ export async function updateUser(data) {
 
 export async function getUserOnboardingStatus() {
   const { userId: clerkUserId } = await auth();
-  if (!clerkUserId) throw new Error("Unauthorized");
+  if (!clerkUserId) {
+    // Return null instead of throwing error - let the page handle redirect
+    return null;
+  }
 
   try {
     let user = await db.user.findUnique({
@@ -146,7 +149,10 @@ export async function getUserOnboardingStatus() {
 
 export async function getUserProfile() {
   const { userId: clerkUserId } = await auth();
-  if (!clerkUserId) throw new Error("Unauthorized");
+  if (!clerkUserId) {
+    // Return null instead of throwing error - let the caller handle redirect
+    return null;
+  }
 
   try {
     const user = await db.user.findUnique({

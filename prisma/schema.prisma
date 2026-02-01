@@ -58,6 +58,7 @@ model Roadmap {
   completedWeeks      Int[]
   weeklyProgress      Json[] // Track completion for each week
   completedTasks      String[]
+  taskProgress        Json? // Dynamic progress tracking: { taskId: { status, percentage, timeSpent, completedSubtasks, timestamps } }
   estimatedCompletion DateTime?
   actualTimeSpent     Int? // minutes
   milestones          Json?

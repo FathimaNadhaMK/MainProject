@@ -9,6 +9,75 @@ import { companyRequirements } from "@/lib/company-intel";
 import { analyzeAssessments, analyzeTimeTracking } from "@/lib/performance-analyzer";
 import { revalidatePath } from "next/cache";
 
+/**
+ * Normalizes the weekly plan to ensure proper phase distribution:
+ * - Weeks 1-4: Foundation
+ * - Weeks 5-8: Intermediate
+ * - Weeks 9-12: Advanced
+ * - Weeks 13-16: Interview Prep
+ * 
+ * This ensures consistency regardless of AI output quality.
+ */
+function normalizeWeeklyPlanPhases(weeklyPlan, targetRole = "Professional") {
+    // Ensure we have exactly 16 weeks
+    const normalized = [];
+
+    for (let i = 0; i < 16; i++) {
+        const week = i + 1;
+        const existingWeek = weeklyPlan.find(w => w.week === week) || weeklyPlan[i];
+
+        // Determine correct phase based on week number
+        let correctPhase = "Foundation";
+        if (week > 12) correctPhase = "Interview Prep";
+        else if (week > 8) correctPhase = "Advanced";
+        else if (week > 4) correctPhase = "Intermediate";
+
+        // Use existing week data but ensure correct phase
+        if (existingWeek) {
+            normalized.push({
+                ...existingWeek,
+                week,
+                phase: correctPhase,
+                // Update topic if it doesn't match the phase
+                topic: existingWeek.topic || `Week ${week}: ${correctPhase} Phase`,
+            });
+        } else {
+            // Create a placeholder week if missing
+            normalized.push({
+                week,
+                phase: correctPhase,
+                topic: `Week ${week}: ${correctPhase} - ${targetRole} Development`,
+                objectives: [`Master ${correctPhase} level concepts`, "Build practical skills"],
+                tasks: [{
+                    title: `${correctPhase} Level Work`,
+                    description: `Focus on ${correctPhase.toLowerCase()}-level skills for ${targetRole}`,
+                    timeEstimate: "5-8 hours",
+                    type: week > 12 ? "practice" : week > 8 ? "project" : "learning",
+                    resources: {
+                        videos: [],
+                        courses: [],
+                        articles: [],
+                        documentation: [],
+                        books: []
+                    },
+                    deliverable: `${correctPhase} milestone`
+                }],
+                projectIdea: {
+                    title: `${correctPhase} Project`,
+                    description: `Build a ${correctPhase.toLowerCase()}-level project`,
+                    techStack: [],
+                    features: [],
+                    difficulty: correctPhase
+                },
+                successCriteria: ["Complete all tasks", "Achieve learning objectives"]
+            });
+        }
+    }
+
+    return normalized;
+}
+
+
 export async function generateRoadmap() {
     const { userId: clerkUserId } = await auth();
     if (!clerkUserId) throw new Error("Unauthorized");
@@ -46,6 +115,11 @@ export async function generateRoadmap() {
             // Check for AI or parsing error
             if (!roadmapData || roadmapData.error) {
                 throw new Error(roadmapData?.error || "Invalid AI response");
+            }
+
+            // NORMALIZE PHASES: Ensure proper phase distribution regardless of AI output
+            if (roadmapData.weeklyPlan && Array.isArray(roadmapData.weeklyPlan)) {
+                roadmapData.weeklyPlan = normalizeWeeklyPlanPhases(roadmapData.weeklyPlan, user.targetRole);
             }
         } catch (aiError) {
             console.error("AI Roadmap Generation failed, using fallback:", aiError);
