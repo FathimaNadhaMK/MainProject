@@ -1,6 +1,8 @@
+/* stylelint-disable at-rule-no-unknown */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+/* stylelint-enable at-rule-no-unknown */
 
 body {
   font-family: Arial, Helvetica, sans-serif;
@@ -34,6 +36,7 @@ body {
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
   }
+
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
@@ -63,32 +66,44 @@ body {
 }
 
 @layer base {
+
+  /* stylelint-disable at-rule-no-unknown */
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
+  /* stylelint-enable at-rule-no-unknown */
 }
 
 @layer utilities {
+
+  /* stylelint-disable at-rule-no-unknown */
   .gradient {
     @apply bg-gradient-to-b from-gray-400 via-gray-200 to-gray-600;
   }
+
   .gradient-title {
     @apply gradient font-extrabold tracking-tighter text-transparent bg-clip-text pb-2 pr-2;
   }
+
+  /* stylelint-enable at-rule-no-unknown */
 }
 
 .hero-image-wrapper {
   perspective: 1000px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .hero-image {
-  /* transform: rotateX(20deg) scale(0.9) translateY(-50); */
   transform: rotateX(15deg) scale(1);
   transition: transform 0.5s ease-out;
   will-change: transform;
+  max-width: 100%;
 }
 
 .hero-image.scrolled {
@@ -101,11 +116,9 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-      to right,
+  background: linear-gradient(to right,
       rgba(255, 255, 255, 0.1) 1px,
-      transparent 1px
-    ),
+      transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
   background-size: 50px 50px;
   pointer-events: none;
