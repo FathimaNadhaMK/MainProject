@@ -3,12 +3,12 @@
 import React from "react";
 import { Button } from "./ui/button";
 import {
-  PenBox,
   LayoutDashboard,
   FileText,
   GraduationCap,
   ChevronDown,
   StarsIcon,
+  BriefcaseIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
@@ -36,36 +36,36 @@ export default function Header() {
 
         {/* Action Buttons */}
         <div className="flex items-center space-x-2 md:space-x-4">
-          
-         <SignedIn>
 
-  {/* Skill Gap Analysis Button */}
-  <Link href="/skill-gap">
-    <Button
-      variant="outline"
-      className="hidden md:inline-flex items-center gap-2"
-    >
-      <StarsIcon className="h-4 w-4" />
-      Skill Gap Analysis
-    </Button>
-    <Button variant="ghost" className="md:hidden w-10 h-10 p-0">
-      <StarsIcon className="h-4 w-4" />
-    </Button>
-  </Link>
+          <SignedIn>
 
-  {/* Career Roadmap Button */}
-  <Link href="/roadmap">
-    <Button
-      variant="outline"
-      className="hidden md:inline-flex items-center gap-2"
-    >
-      <LayoutDashboard className="h-4 w-4" />
-      Career Roadmap
-    </Button>
-    <Button variant="ghost" className="md:hidden w-10 h-10 p-0">
-      <LayoutDashboard className="h-4 w-4" />
-    </Button>
-  </Link>
+            {/* Skill Gap Analysis Button */}
+            <Link href="/skill-gap">
+              <Button
+                variant="outline"
+                className="hidden md:inline-flex items-center gap-2"
+              >
+                <StarsIcon className="h-4 w-4" />
+                Skill Gap Analysis
+              </Button>
+              <Button variant="ghost" className="md:hidden w-10 h-10 p-0">
+                <StarsIcon className="h-4 w-4" />
+              </Button>
+            </Link>
+
+            {/* Career Roadmap Button */}
+            <Link href="/roadmap">
+              <Button
+                variant="outline"
+                className="hidden md:inline-flex items-center gap-2"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Career Roadmap
+              </Button>
+              <Button variant="ghost" className="md:hidden w-10 h-10 p-0">
+                <LayoutDashboard className="h-4 w-4" />
+              </Button>
+            </Link>
 
             {/* Growth Tools Dropdown */}
             <DropdownMenu>
@@ -95,19 +95,17 @@ export default function Header() {
                     Resume Build
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link
-                    href="/ai-cover-letter"
-                    className="flex items-center gap-2"
-                  >
-                    <PenBox className="h-4 w-4" />
-                    Cover Letter
-                  </Link>
-                </DropdownMenuItem>
+
                 <DropdownMenuItem asChild>
                   <Link href="/interview" className="flex items-center gap-2">
                     <GraduationCap className="h-4 w-4" />
                     Interview Prep
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/jobs" className="flex items-center gap-2">
+                    <BriefcaseIcon className="h-4 w-4" />
+                    Job Matches
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>

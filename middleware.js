@@ -6,7 +6,7 @@ const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",
   "/resume(.*)",
   "/interview(.*)",
-  "/ai-cover-letter(.*)",
+  "/jobs(.*)",
   "/onboarding(.*)",
   "/skill-gap(.*)",       // protect page
   // ❌ DO NOT protect /api/skill-gap

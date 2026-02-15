@@ -38,6 +38,8 @@ model User {
   weeklyInsights        WeeklyInsight[]
   achievements          UserAchievement[]
   stats                 UserStats?
+  jobMatches            UserJobMatch[]
+  matchPreferences      UserMatchPreference?
 
   @@index([clerkUserId])
   @@index([email])
@@ -408,4 +410,78 @@ model UserSkill {
   @@unique([userId, skill])
   @@index([userId])
   @@index([skill])
+}
+
+// ==========================================
+// Job Matching System
+// ==========================================
+
+model JobListing {
+  id                String          @id @default(cuid())
+  title             String
+  company           String
+  location          String
+  experienceLevel   String          // "Intern", "Entry Level", "Junior", "Mid-Level", "Senior"
+  skillsRequired    String[]
+  industry          String
+  salaryRange       String?
+  description       String          @db.Text
+  applicationUrl    String
+  postedDate        DateTime
+  externalJobId     String          @unique
+  source            String          // "jsearch", "adzuna"
+  isRemote          Boolean         @default(false)
+  jobType           String?         // "full-time", "part-time", "contract", "internship"
+  isActive          Boolean         @default(true)
+  matchedUsers      UserJobMatch[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([industry, experienceLevel])
+  @@index([isActive, postedDate])
+  @@index([source])
+}
+
+model UserJobMatch {
+  id              String      @id @default(cuid())
+  userId          String
+  jobId           String
+  matchScore      Float       // 0-100 overall weighted score
+  skillMatchScore Float
+  levelMatchScore Float
+  locationScore   Float       @default(0)
+  atsScore        Float       @default(0)
+  industryScore   Float       @default(0)
+  matchReasoning  Json?       // "Why this match?" structured data
+  gapAnalysis     Json?       // Skills gap + readiness boost data
+  status          String      @default("suggested") // suggested, saved, applied, rejected
+  viewedAt        DateTime?
+  appliedAt       DateTime?
+  savedAt         DateTime?
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job             JobListing  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  createdAt       DateTime    @default(now())
+
+  @@unique([userId, jobId])
+  @@index([userId, status])
+  @@index([userId, matchScore])
+}
+
+model UserMatchPreference {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  skillWeight           Float     @default(0.35)
+  levelWeight           Float     @default(0.25)
+  locationWeight        Float     @default(0.15)
+  atsWeight             Float     @default(0.15)
+  industryWeight        Float     @default(0.10)
+  preferredLocations    String[]
+  preferRemote          Boolean   @default(false)
+  savedCount            Int       @default(0)
+  appliedCount          Int       @default(0)
+  lastCalibration       DateTime?
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
 }

@@ -2,12 +2,12 @@ export const faqs = [
   {
     question: "What makes Guidely unique as a career development tool?",
     answer:
-      " Guidely combines AI-powered career tools with industry-specific insights to help you advance your career. Our platform offers three main features: an intelligent resume builder, a cover letter generator, and an adaptive interview preparation system. Each tool is tailored to your industry and skills, providing personalized guidance for your professional journey.",
+      " Guidely combines AI-powered career tools with industry-specific insights to help you advance your career. Our platform offers main features: an intelligent resume builder and an adaptive interview preparation system. Each tool is tailored to your industry and skills, providing personalized guidance for your professional journey.",
   },
   {
     question: "How does  Guidely create tailored content?",
     answer:
-      " Guidely learns about your industry, experience, and skills during onboarding. It then uses this information to generate customized resumes, cover letters, and interview questions. The content is specifically aligned with your professional background and industry standards, making it highly relevant and effective.",
+      " Guidely learns about your industry, experience, and skills during onboarding. It then uses this information to generate customized resumes and interview questions. The content is specifically aligned with your professional background and industry standards, making it highly relevant and effective.",
   },
   {
     question: "How accurate and up-to-date are  Guidely's industry insights?",
@@ -27,6 +27,6 @@ export const faqs = [
   {
     question: "Can I edit the AI-generated content?",
     answer:
-      "Yes! While Guidely generates high-quality initial content, you have full control to edit and customize all generated resumes, cover letters, and other content. Our markdown editor makes it easy to refine the content to perfectly match your needs.",
+      "Yes! While Guidely generates high-quality initial content, you have full control to edit and customize all generated resumes and other content. Our markdown editor makes it easy to refine the content to perfectly match your needs.",
   },
 ];
