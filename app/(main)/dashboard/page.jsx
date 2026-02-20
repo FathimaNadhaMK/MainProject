@@ -19,7 +19,7 @@ export default async function DashboardPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-6xl font-bold gradient-title mb-6">Industry Insights</h1>
+        <h1 className="text-4xl md:text-5xl font-bold gradient-title mb-6">Industry Insights</h1>
 
         <div className="space-y-4">
           <div className="flex">

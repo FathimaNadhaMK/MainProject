@@ -64,8 +64,10 @@ const DashboardView = ({ insights, engagement }) => {
       {/* Role Spectrum Analysis Title */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-blue-600 pl-6 py-2 bg-white/5 rounded-r-2xl animate-in fade-in slide-in-from-left-4 duration-700">
         <h2 className="text-3xl font-extrabold text-white tracking-tight">
-          Role Intelligence: <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400">
-            {insights.targetRole || insights.industry?.split('-').join(' ')}
+          Role Intelligence: <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 capitalize">
+            {insights.targetRole && insights.targetRole !== "general"
+              ? insights.targetRole
+              : insights.industry?.split('-').join(' ')}
           </span>
         </h2>
         <div className="flex items-center gap-3">
@@ -89,7 +91,7 @@ const DashboardView = ({ insights, engagement }) => {
           </div>
           <div className="flex-1 flex flex-col justify-end pb-4 relative z-10">
             <div className="space-y-6">
-              <h4 className="text-6xl font-black text-white tracking-tighter">
+              <h4 className="text-3xl font-black text-white tracking-tighter">
                 {marketOutlook}
               </h4>
               <p className="text-sm text-gray-400 leading-relaxed line-clamp-2">
@@ -114,7 +116,7 @@ const DashboardView = ({ insights, engagement }) => {
           </div>
           <div className="flex-1 flex flex-col justify-end pb-4 relative z-10">
             <div className="space-y-6">
-              <h4 className="text-7xl font-black text-white tracking-tighter">
+              <h4 className="text-4xl font-black text-white tracking-tighter">
                 {insights.growthRate?.toFixed(1) || "15.0"}%
               </h4>
               <div className="h-2.5 w-full bg-white/5 rounded-full overflow-hidden p-0.5">
@@ -139,7 +141,7 @@ const DashboardView = ({ insights, engagement }) => {
           </div>
           <div className="flex-1 flex flex-col justify-end pb-4 relative z-10">
             <div className="space-y-6">
-              <h4 className="text-6xl font-black text-white tracking-tighter italic">
+              <h4 className="text-3xl font-black text-white tracking-tighter italic">
                 {demandLevel}
               </h4>
               <div className={`h-2.5 w-full rounded-full transition-all duration-700 ${getDemandColor(demandLevel)}`} />

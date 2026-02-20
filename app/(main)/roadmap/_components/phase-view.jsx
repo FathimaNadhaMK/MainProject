@@ -15,7 +15,8 @@ import {
     BookOpen,
     ExternalLink,
     PlayCircle,
-    Award
+    Award,
+    ChevronRight,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -377,26 +378,107 @@ export default function PhaseView({ roadmap, phase, weekRange, phaseNumber }) {
 
                                 {/* Project Idea Feature */}
                                 {week.projectIdea && (
-                                    <Card className={`bg-gradient-to-br from-${colorScheme.primary}-500/10 to-transparent border-${colorScheme.primary}-500/20`}>
-                                        <CardContent className="p-6">
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <div className={`h-8 w-8 rounded-lg bg-${colorScheme.primary}-500/20 flex items-center justify-center`}>
-                                                    <CalendarDays className={`h-4 w-4 text-${colorScheme.primary}-400`} />
-                                                </div>
-                                                <div>
-                                                    <h5 className="font-bold text-white text-sm">Week {week.week} Mini-Project</h5>
-                                                    <p className="text-[11px] text-gray-500 uppercase tracking-wider">{week.projectIdea.difficulty} • {week.projectIdea.techStack?.join(', ')}</p>
-                                                </div>
+                                    <div className="space-y-8 mt-4">
+                                        {/* Learning Resources Section */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <PlayCircle className={`h-4 w-4 text-${colorScheme.primary}-400`} />
+                                                <h5 className="text-sm font-bold uppercase tracking-widest text-gray-400">Guiding Learning Path</h5>
                                             </div>
-                                            <h6 className={`font-bold text-${colorScheme.primary}-300 text-lg mb-2`}>{week.projectIdea.title}</h6>
-                                            <p className="text-sm text-gray-400 mb-4">{week.projectIdea.description}</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {week.projectIdea.features?.map((feat, fIdx) => (
-                                                    <Badge key={fIdx} variant="secondary" className="bg-white/5 text-gray-400 font-normal text-[10px]">{feat}</Badge>
-                                                ))}
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                                {/* Aggregate resources from all tasks for this week */}
+                                                {(() => {
+                                                    const allVids = week.tasks?.flatMap(t => t.resources?.videos || []) || [];
+                                                    const allCourses = week.tasks?.flatMap(t => t.resources?.courses || []) || [];
+
+                                                    // De-duplicate by URL
+                                                    const seenUrls = new Set();
+                                                    const displayResources = [...allVids, ...allCourses]
+                                                        .filter(res => {
+                                                            if (!res.url || seenUrls.has(res.url)) return false;
+                                                            seenUrls.add(res.url);
+                                                            return true;
+                                                        })
+                                                        .slice(0, 8); // Show more now that we have full width
+
+                                                    if (displayResources.length === 0) {
+                                                        return (
+                                                            <div className="col-span-full py-6 px-4 rounded-xl bg-white/[0.02] border border-dashed border-white/10 text-center">
+                                                                <p className="text-xs text-gray-500">Explore task details for specific documentation and guides.</p>
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    return displayResources.map((res, rIdx) => (
+                                                        <a
+                                                            key={rIdx}
+                                                            href={res.url || "#"}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="group flex items-center gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-blue-500/30 hover:bg-blue-500/5 transition-all shadow-lg backdrop-blur-sm"
+                                                        >
+                                                            <div className="h-12 w-12 shrink-0 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/5">
+                                                                {res.thumbnail ? (
+                                                                    <img src={res.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                                                ) : (
+                                                                    <Youtube className="h-6 w-6 text-red-500/50" />
+                                                                )}
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <h6 className="text-[12px] font-bold text-gray-200 line-clamp-1 group-hover:text-white transition-colors">
+                                                                    {res.title}
+                                                                </h6>
+                                                                <p className="text-[10px] text-gray-500 uppercase font-black tracking-tighter mt-0.5">
+                                                                    {res.creator || res.platform || "Educational Content"}
+                                                                </p>
+                                                            </div>
+                                                        </a>
+                                                    ));
+                                                })()}
                                             </div>
-                                        </CardContent>
-                                    </Card>
+                                        </div>
+
+                                        {/* Project Card (Now Below Courses) */}
+                                        <Card className={`bg-gradient-to-br from-${colorScheme.primary}-500/10 to-transparent border-${colorScheme.primary}-500/20 shadow-2xl overflow-hidden relative group`}>
+                                            <div className={`absolute top-0 right-0 w-32 h-32 bg-${colorScheme.primary}-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-${colorScheme.primary}-500/10 transition-all`} />
+                                            <CardContent className="p-8">
+                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                                    <div className="flex-1 space-y-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`h-10 w-10 rounded-xl bg-${colorScheme.primary}-500/15 flex items-center justify-center`}>
+                                                                <CalendarDays className={`h-5 w-5 text-${colorScheme.primary}-400`} />
+                                                            </div>
+                                                            <div>
+                                                                <h5 className="font-black text-white text-base tracking-tight">Week {week.week} Mini-Project</h5>
+                                                                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-[0.2em]">{week.projectIdea.difficulty} LEVEL • {week.projectIdea.techStack?.slice(0, 3).join(' + ')}</p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="space-y-2">
+                                                            <h6 className={`font-black text-${colorScheme.primary}-300 text-2xl tracking-tighter`}>{week.projectIdea.title}</h6>
+                                                            <p className="text-gray-400 leading-relaxed max-w-3xl">{week.projectIdea.description}</p>
+                                                        </div>
+
+                                                        <div className="flex flex-wrap gap-2 pt-2">
+                                                            {week.projectIdea.features?.map((feat, fIdx) => (
+                                                                <Badge key={fIdx} variant="outline" className="bg-white/[0.03] border-white/10 text-gray-400 font-bold text-[10px] py-1 px-3 rounded-lg">
+                                                                    {feat}
+                                                                </Badge>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="shrink-0 flex items-center">
+                                                        <Button variant="outline" className={`border-${colorScheme.primary}-500/30 text-${colorScheme.primary}-400 hover:bg-${colorScheme.primary}-500/10 hover:border-${colorScheme.primary}-500/50 font-bold h-12 px-8 rounded-xl`}>
+                                                            Start Building
+                                                            <ChevronRight className="ml-2 h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
                                 )}
                             </div>
                         </motion.div>

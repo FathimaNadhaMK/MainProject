@@ -188,6 +188,7 @@ export async function getIndustryInsights() {
       },
       create: {
         industry: user.industry,
+        targetRole: user.targetRole || "general",
         overview: ai.overview,
         marketSize: ai.marketSize,
         growthRate: ai.growthRate,
