@@ -40,6 +40,7 @@ model User {
   stats                 UserStats?
   jobMatches            UserJobMatch[]
   matchPreferences      UserMatchPreference?
+  projectEvaluations    ProjectEvaluation[]
 
   @@index([clerkUserId])
   @@index([email])
@@ -482,6 +483,19 @@ model UserMatchPreference {
   lastCalibration       DateTime?
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model ProjectEvaluation {
+  id          String   @id @default(cuid())
+  userId      String
+  weekNumber  Int
+  repoUrl     String
+  score       Int
+  report      Json
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }

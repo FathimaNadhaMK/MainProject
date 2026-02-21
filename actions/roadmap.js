@@ -8,6 +8,233 @@ import { recommendCertifications } from "@/lib/certification-engine";
 import { companyRequirements } from "@/lib/company-intel";
 import { analyzeAssessments, analyzeTimeTracking } from "@/lib/performance-analyzer";
 import { revalidatePath } from "next/cache";
+import { fetchGithubRepoData } from "@/lib/github";
+
+export async function evaluateProject(url, weekNumber) {
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) throw new Error("Unauthorized");
+
+    try {
+        const user = await db.user.findUnique({
+            where: { clerkUserId },
+            include: { roadmap: true }
+        });
+
+        if (!user || !user.roadmap) throw new Error("Roadmap not found");
+
+        const weeklyPlan = user.roadmap.weeklyPlan;
+        const weekData = weeklyPlan.find(w => w.week === weekNumber);
+
+        if (!weekData) throw new Error("Week data not found");
+
+        // Step 2: Fetch Repo Data via GitHub API
+        const repoData = await fetchGithubRepoData(url);
+
+        // VALIDATION 1: Check if user already submitted for THIS week
+        const existingWeekSubmission = await db.projectEvaluation.findFirst({
+            where: { userId: user.id, weekNumber: weekNumber }
+        });
+
+        if (existingWeekSubmission) {
+            return { success: false, error: `You have already submitted a project for Week ${weekNumber}.` };
+        }
+
+        // VALIDATION 2: Check if this EXACT repo URL has been submitted before
+        const existingUrlSubmission = await db.projectEvaluation.findFirst({
+            where: { userId: user.id, repoUrl: url }
+        });
+
+        if (existingUrlSubmission) {
+            return { success: false, error: "This repository has already been submitted for a different week. Please submit a new repository." };
+        }
+
+        // Step 3: Build the Evaluation Prompt & Gemini API evaluates the code
+        const report = await aiService.evaluateProject(repoData, weekData.objectives);
+
+        if (report.error) {
+            return { success: false, error: report.error };
+        }
+
+        // Save report to database
+        const evaluation = await db.projectEvaluation.create({
+            data: {
+                userId: user.id,
+                weekNumber: weekNumber,
+                repoUrl: url,
+                score: report.score || 0,
+                report: report,
+            }
+        });
+
+        revalidatePath("/roadmap");
+        revalidatePath("/dashboard");
+
+        return { success: true, report, evaluationId: evaluation.id };
+    } catch (error) {
+        console.error("Project evaluation failed:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function generateWeeklyQuiz(weekNumber) {
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) throw new Error("Unauthorized");
+
+    try {
+        const user = await db.user.findUnique({
+            where: { clerkUserId },
+            include: { roadmap: true }
+        });
+        if (!user || !user.roadmap) throw new Error("User or Roadmap not found");
+
+        const weekData = user.roadmap.weeklyPlan.find(w => w.week === weekNumber);
+        const topic = weekData ? weekData.topic : "General Concepts";
+        const role = user.targetRole || "Software Engineer";
+        const phase = weekData ? weekData.phase : (weekNumber <= 4 ? "Foundation" : weekNumber <= 8 ? "Intermediate" : weekNumber <= 12 ? "Advanced" : "Interview Prep");
+
+        let difficultySetting = "";
+        if (phase === "Foundation" || weekNumber <= 4) {
+            difficultySetting = "EASY DIFFICULTY: The questions should be approachable for a complete beginner learning the fundamentals. Formulate simple scenario-based questions focusing on basic application and core concepts. Avoid overly complex edge cases.";
+        } else if (phase === "Intermediate" || weekNumber <= 8) {
+            difficultySetting = "MEDIUM DIFFICULTY: The questions should challenge someone who knows the basics and is starting to build real projects. Focus on common paradigms, state management, and standard debugging scenarios.";
+        } else if (phase === "Advanced" || weekNumber <= 12) {
+            difficultySetting = "HARD DIFFICULTY: The questions should be difficult, targeting advanced optimization, complex system behavior, architecture, and subtle edge cases.";
+        } else {
+            difficultySetting = "EXPERT DIFFICULTY: The questions must be extremely rigorous, resembling top-tier tech company system design or deep architectural interview questions. These should be tricky and require deep expertise to solve.";
+        }
+
+        // Passing a random timestamp to ensure unique questions per attempt
+        const prompt = `You are a strict technical interviewer. Generate 5 multiple-choice questions for a candidate preparing for the role of ${role}. The questions must be about "${topic}".
+Important: Provide APPLICATION-LEVEL scenario-based questions, not simple definitions. The questions should test practical thinking.
+${difficultySetting}
+Ensure the questions are unique for this attempt ID: ${Date.now()}.
+Return as JSON with structure: { "topic": "${topic}", "questions": [{"question": "text", "options": {"a": "opt", "b": "opt", "c": "opt", "d": "opt"}, "correctAnswer": "a", "explanation": "text"}] }`;
+
+        const result = await aiService.genAI.getGenerativeModel({ model: "gemini-2.5-flash" }, { apiVersion: "v1beta" }).generateContent(prompt);
+        const responseText = await result.response.text();
+        return { success: true, quiz: aiService.parseAIResponse(responseText) };
+    } catch (error) {
+        console.error("Generate quiz error:", error);
+        return { success: false, error: "Failed to generate quiz." };
+    }
+}
+
+export async function submitWeeklyQuiz(weekNumber, score, quizData) {
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) throw new Error("Unauthorized");
+
+    try {
+        const user = await db.user.findUnique({
+            where: { clerkUserId }
+        });
+        if (!user) throw new Error("User not found");
+
+        await db.assessment.create({
+            data: {
+                userId: user.id,
+                title: `Week ${weekNumber} Quiz`,
+                type: "WEEKLY_QUIZ",
+                totalQuestions: 5,
+                score: score,
+                questions: quizData.questions,
+                certification: `Week ${weekNumber}` // Using certification field temporarily as metadata
+            }
+        });
+
+        revalidatePath("/roadmap");
+        return { success: true };
+    } catch (error) {
+        console.error("Submit quiz error:", error);
+        return { success: false, error: "Failed to submit quiz." };
+    }
+}
+
+export async function getWeeklyCompletionStatus(totalWeeks = 16) {
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) return {};
+
+    try {
+        const user = await db.user.findUnique({ where: { clerkUserId } });
+        if (!user) return {};
+
+        // Get all project evaluations and passed quizzes
+        const [evals, assessments] = await Promise.all([
+            db.projectEvaluation.findMany({
+                where: { userId: user.id },
+                select: { weekNumber: true }
+            }),
+            db.assessment.findMany({
+                where: { userId: user.id, type: "WEEKLY_QUIZ", score: { gte: 80 } }, // Assume 80% is pass
+                select: { title: true }
+            })
+        ]);
+
+        const evaluatedWeeks = new Set(evals.map(e => e.weekNumber));
+        // Identify passed quizzes by scanning title "Week X Quiz"
+        const passedQuizWeeks = new Set(assessments.map(a => {
+            const match = a.title.match(/Week (\d+) Quiz/);
+            return match ? parseInt(match[1]) : null;
+        }).filter(w => w !== null));
+
+        const status = {};
+        for (let i = 1; i <= totalWeeks; i++) {
+            status[i] = {
+                projectCompleted: evaluatedWeeks.has(i),
+                quizPassed: passedQuizWeeks.has(i),
+                isUnlocked: i === 1 || (evaluatedWeeks.has(i - 1) && passedQuizWeeks.has(i - 1))
+            };
+        }
+        return status;
+    } catch (err) {
+        console.error("Completion check error", err);
+        return {};
+    }
+}
+
+export async function checkSubmissionStatus(weekNumber) {
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) return { isSubmitted: false };
+
+    try {
+        const user = await db.user.findUnique({
+            where: { clerkUserId },
+        });
+
+        if (!user) return { isSubmitted: false };
+
+        const evaluation = await db.projectEvaluation.findFirst({
+            where: { userId: user.id, weekNumber: weekNumber }
+        });
+
+        if (evaluation) {
+            return { isSubmitted: true, report: evaluation.report, repoUrl: evaluation.repoUrl };
+        }
+        return { isSubmitted: false };
+    } catch (error) {
+        return { isSubmitted: false };
+    }
+}
+
+export async function getProjectEvaluations() {
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) throw new Error("Unauthorized");
+
+    try {
+        const user = await db.user.findUnique({
+            where: { clerkUserId },
+        });
+
+        if (!user) throw new Error("User not found");
+
+        return await db.projectEvaluation.findMany({
+            where: { userId: user.id },
+            orderBy: { createdAt: "desc" }
+        });
+    } catch (error) {
+        console.error("Failed to fetch evaluations:", error);
+        return [];
+    }
+}
 
 /**
  * Normalizes the weekly plan to ensure proper phase distribution:

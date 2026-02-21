@@ -30,6 +30,9 @@ import {
     DialogTrigger
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProjectSubmission } from "./ProjectSubmission";
+import { WeeklyQuiz } from "./WeeklyQuiz";
+import { getWeeklyCompletionStatus } from "@/actions/roadmap";
 
 const phaseColors = {
     1: { primary: "blue", gradient: "from-blue-600/10 to-purple-600/10" },
@@ -40,6 +43,15 @@ const phaseColors = {
 
 export default function PhaseView({ roadmap, phase, weekRange, phaseNumber }) {
     const [completedTasks, setCompletedTasks] = useState(new Set(roadmap.completedTasks || []));
+    const [weekStatus, setWeekStatus] = useState({});
+
+    React.useEffect(() => {
+        const fetchStatus = async () => {
+            const status = await getWeeklyCompletionStatus();
+            setWeekStatus(status);
+        };
+        fetchStatus();
+    }, []);
 
     const { weeklyPlan } = roadmap;
 
@@ -81,10 +93,14 @@ export default function PhaseView({ roadmap, phase, weekRange, phaseNumber }) {
         }
     };
 
-    const totalTasks = phaseWeeks.reduce((acc, week) => acc + (week.tasks?.length || 0), 0);
+    const totalTasks = phaseWeeks.reduce((acc, week) => acc + (week.tasks?.length || 0) + 2, 0); // +2 for Project & Quiz
     const completedCount = phaseWeeks.reduce((acc, week) => {
         const weekIdx = weeklyPlan.indexOf(week);
-        return acc + (week.tasks?.filter((t, tIdx) => completedTasks.has(`${weekIdx}-${tIdx}`)).length || 0);
+        const manualTasksCompleted = week.tasks?.filter((t, tIdx) => completedTasks.has(`${weekIdx}-${tIdx}`)).length || 0;
+        const projectDone = weekStatus[week.week]?.projectCompleted ? 1 : 0;
+        const quizDone = weekStatus[week.week]?.quizPassed ? 1 : 0;
+
+        return acc + manualTasksCompleted + projectDone + quizDone;
     }, 0);
     const phaseProgress = totalTasks > 0 ? (completedCount / totalTasks) * 100 : 0;
 
@@ -172,7 +188,20 @@ export default function PhaseView({ roadmap, phase, weekRange, phaseNumber }) {
                             </motion.div>
 
                             <div className="space-y-6">
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                {/* Locking Overlay for Sequential Play */}
+                                {!weekStatus[week.week]?.isUnlocked && week.week > 1 ? (
+                                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-20 flex flex-col items-center justify-center rounded-3xl border border-white/10 m-2 mt-4">
+                                        <div className="bg-red-500/10 text-red-400 p-4 rounded-full mb-4">
+                                            <Target className="h-8 w-8" />
+                                        </div>
+                                        <h3 className="text-2xl font-bold text-white mb-2">Week {week.week} is Locked</h3>
+                                        <p className="text-gray-400 max-w-sm text-center px-4">
+                                            You must complete the Week {week.week - 1} Project and Quiz to unlock this content. No skipping allowed!
+                                        </p>
+                                    </div>
+                                ) : null}
+
+                                <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 ${!weekStatus[week.week]?.isUnlocked && week.week > 1 ? 'opacity-20 pointer-events-none' : ''}`}>
                                     <div>
                                         <div className="flex items-center gap-2 mb-1">
                                             <Badge variant="outline" className={`text-[10px] uppercase border-${colorScheme.primary}-500/30 text-${colorScheme.primary}-400 px-2 py-0`}>
@@ -188,7 +217,14 @@ export default function PhaseView({ roadmap, phase, weekRange, phaseNumber }) {
                                         <div className="w-24 h-2 bg-white/5 rounded-full overflow-hidden p-0.5">
                                             <motion.div
                                                 initial={{ width: 0 }}
-                                                whileInView={{ width: `${(week.tasks?.filter(t => completedTasks.has(`${weekIdx}-${week.tasks.indexOf(t)}`)).length / (week.tasks?.length || 1)) * 100}%` }}
+                                                whileInView={{
+                                                    width: `${(
+                                                        ((week.tasks?.filter(t => completedTasks.has(`${weekIdx}-${week.tasks.indexOf(t)}`)).length || 0) +
+                                                            (weekStatus[week.week]?.projectCompleted ? 1 : 0) +
+                                                            (weekStatus[week.week]?.quizPassed ? 1 : 0)) /
+                                                        ((week.tasks?.length || 0) + 2)
+                                                    ) * 100}%`
+                                                }}
                                                 viewport={{ once: true }}
                                                 className={`h-full bg-${colorScheme.primary}-500 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(37,99,235,0.3)]`}
                                             />
@@ -451,7 +487,7 @@ export default function PhaseView({ roadmap, phase, weekRange, phaseNumber }) {
                                                             </div>
                                                             <div>
                                                                 <h5 className="font-black text-white text-base tracking-tight">Week {week.week} Mini-Project</h5>
-                                                                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-[0.2em]">{week.projectIdea.difficulty} LEVEL • {week.projectIdea.techStack?.slice(0, 3).join(' + ')}</p>
+                                                                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-[0.2em]">{week.projectIdea.difficulty} LEVEL • {week.projectIdea.techStack?.slice(0, 3)?.join(' + ')}</p>
                                                             </div>
                                                         </div>
 
@@ -469,11 +505,24 @@ export default function PhaseView({ roadmap, phase, weekRange, phaseNumber }) {
                                                         </div>
                                                     </div>
 
-                                                    <div className="shrink-0 flex items-center">
-                                                        <Button variant="outline" className={`border-${colorScheme.primary}-500/30 text-${colorScheme.primary}-400 hover:bg-${colorScheme.primary}-500/10 hover:border-${colorScheme.primary}-500/50 font-bold h-12 px-8 rounded-xl`}>
-                                                            Start Building
-                                                            <ChevronRight className="ml-2 h-4 w-4" />
-                                                        </Button>
+                                                    <div className="shrink-0 flex flex-col items-center gap-3">
+                                                        <ProjectSubmission
+                                                            weekNumber={week.week}
+                                                            colorScheme={colorScheme}
+                                                        />
+                                                        <WeeklyQuiz
+                                                            weekNumber={week.week}
+                                                            colorScheme={colorScheme}
+                                                            lockStatus={weekStatus[week.week]}
+                                                            onPassed={() => {
+                                                                // Fast-refresh local state optimistic
+                                                                setWeekStatus(prev => ({
+                                                                    ...prev,
+                                                                    [week.week]: { ...prev[week.week], quizPassed: true },
+                                                                    [week.week + 1]: { ...prev[week.week + 1], isUnlocked: prev[week.week]?.projectCompleted }
+                                                                }));
+                                                            }}
+                                                        />
                                                     </div>
                                                 </div>
                                             </CardContent>
