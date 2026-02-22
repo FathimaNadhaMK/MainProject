@@ -1,19 +1,15 @@
 "use client";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import SystemCheck from "./_components/system-check";
 
 export default function InterviewHome() {
   const router = useRouter();
 
-  return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-4">
-        AI Interview – System Check
-      </h1>
+  // immediately redirect users to the new start page; the system check
+  // component was deemed unnecessary, so we skip it entirely.
+  useEffect(() => {
+    router.replace("/interview/start");
+  }, [router]);
 
-      <SystemCheck
-        onSuccess={() => router.push("/interview/start")}
-      />
-    </div>
-  );
+  return null; // nothing to render, navigation happens on mount
 }

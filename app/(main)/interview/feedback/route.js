@@ -1,46 +1,19 @@
 import { NextResponse } from "next/server";
 
+import { NextResponse } from "next/server";
+import { evaluateInterview } from "@/interview/orchestrator";
+
 export async function POST(req) {
-  const { conversation } = await req.json();
+  const { sessionId, conversation } = await req.json();
+  if (!sessionId) {
+    return NextResponse.json({ error: "sessionId required" }, { status: 400 });
+  }
 
-  const prompt = `
-You are an experienced recruiter evaluating an interview.
-
-Interview transcript:
-${conversation.join("\n")}
-
-Evaluate the candidate on:
-- Communication
-- Confidence
-- Technical depth
-- Clarity
-
-Provide:
-1. Strengths
-2. Weaknesses
-3. Suggestions
-4. Final verdict (entry-level readiness)
-
-Keep it realistic and professional.
-`;
-
-  const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" +
-    process.env.GEMINI_API_KEY,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
-    }
-  );
-
-  const data = await response.json();
-
-  return NextResponse.json({
-    feedback:
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "Feedback unavailable."
-  });
+  try {
+    const evaluation = await evaluateInterview({ sessionId, conversation });
+    return NextResponse.json({ feedback: evaluation });
+  } catch (err) {
+    console.error("/interview/feedback error", err);
+    return NextResponse.json({ error: err.message || "Evaluation failed" }, { status: 500 });
+  }
 }

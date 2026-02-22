@@ -147,6 +147,16 @@ export async function getUserOnboardingStatus() {
   }
 }
 
+export async function getInterviewContext() {
+  // return minimal information for interview start filtering
+  const status = await getUserOnboardingStatus();
+  if (!status) return null;
+  return {
+    targetField: status.user.industry,
+    targetRole: status.user.targetRole,
+  };
+}
+
 export async function getUserProfile() {
   const { userId: clerkUserId } = await auth();
   if (!clerkUserId) {
