@@ -17,201 +17,83 @@ import { Badge } from "@/components/ui/badge";
 const PROFICIENCY_LEVELS = ["Basic", "Medium", "Good", "Proficient"];
 
 const COMMON_SKILLS = [
-  /* =========================
-     CORE TECH / IT SKILLS
-     ========================= */
-  "JavaScript",
-  "Python",
-  "Java",
-  "C",
-  "C++",
-  "C#",
-  "Go",
-  "Rust",
-  "PHP",
-  "TypeScript",
-  "R",
-  "Kotlin",
-  "Swift",
+    /* =========================
+       SOFTWARE ENGINEERING & IT
+       ========================= */
+    "JavaScript", "Python", "Java", "C", "C++", "C#", "Go", "Rust", "PHP", "TypeScript", "R", "Kotlin", "Swift", "Ruby", "Perl", "Scala", "Dart", "Objective-C", "Assembly Language", "Bash", "PowerShell", "Lua", "MATLAB", "SQL",
+    "HTML", "HTML5", "CSS", "CSS3", "Tailwind CSS", "Bootstrap", "React", "Next.js", "Angular", "Vue.js", "Node.js", "Express.js", "Django", "Flask", "Spring Boot", "ASP.NET", "Ruby on Rails", "Laravel", "React Native", "Flutter",
+    "MongoDB", "PostgreSQL", "MySQL", "Redis", "Firebase", "Oracle", "Microsoft SQL Server", "SQLite", "Cassandra", "Elasticsearch", "Neo4j", "MariaDB", "Supabase", "Prisma", "Snowflake", "BigQuery",
+    "Software Development", "Web Development", "Mobile Application Development", "Object-Oriented Programming (OOP)", "API Development", "Microservices", "RESTful WebServices", "GraphQL", "WebSockets", "Test-Driven Development (TDD)", "Version Control", "Git", "GitHub", "GitLab",
 
-  /* =========================
-     WEB & APP DEVELOPMENT
-     ========================= */
-  "HTML",
-  "CSS",
-  "Tailwind CSS",
-  "Bootstrap",
-  "React",
-  "Next.js",
-  "Angular",
-  "Vue.js",
-  "Node.js",
-  "Express.js",
-  "REST API Development",
-  "GraphQL",
-  "WebSockets",
-  "Mobile App Development",
-  "Android Development",
-  "iOS Development",
+    /* =========================
+       CLOUD, DEVOPS & INFRASTRUCTURE
+       ========================= */
+    "Amazon Web Services (AWS)", "Microsoft Azure", "Google Cloud Platform (GCP)", "Docker Products", "Kubernetes", "Linux", "Unix", "Ubuntu", "CentOS", "Shell Scripting", "Terraform", "Ansible", "Jenkins", "CI/CD", "Prometheus", "Grafana", "Datadog", "Nginx", "Apache", "Server Administration", "System Administration", "Network Administration", "Cisco Routers", "TCP/IP", "DNS", "Virtualization", "VMware",
 
-  /* =========================
-     DATABASE & DATA
-     ========================= */
-  "SQL",
-  "MySQL",
-  "PostgreSQL",
-  "MongoDB",
-  "Redis",
-  "Firebase",
-  "Data Modeling",
-  "Data Warehousing",
-  "ETL Pipelines",
-  "Data Cleaning",
+    /* =========================
+       DATA, AI & MACHINE LEARNING
+       ========================= */
+    "Data Analysis", "Data Science", "Machine Learning", "Deep Learning", "Artificial Intelligence (AI)", "Natural Language Processing (NLP)", "Computer Vision", "Statistical Modeling", "Predictive Analytics", "Data Mining", "Data Visualization", "TensorFlow", "PyTorch", "Scikit-Learn", "Keras", "Pandas", "NumPy", "Matplotlib", "Tableau", "Power BI", "Apache Spark", "Hadoop", "Data Warehousing", "ETL", "Business Intelligence (BI)", "A/B Testing",
 
-  /* =========================
-     CLOUD & DEVOPS
-     ========================= */
-  "AWS",
-  "Azure",
-  "Google Cloud Platform",
-  "Docker",
-  "Kubernetes",
-  "CI/CD Pipelines",
-  "Linux",
-  "Shell Scripting",
-  "Terraform",
-  "System Administration",
+    /* =========================
+       CYBERSECURITY
+       ========================= */
+    "Cybersecurity", "Information Security", "Network Security", "Ethical Hacking", "Penetration Testing", "Vulnerability Assessment", "Incident Response", "Cryptography", "Identity & Access Management (IAM)", "Firewall Administration", "Malware Analysis", "Security Auditing", "Risk Management", "Compliance Management", "SIEM", "CISSP", "CompTIA Security+",
 
-  /* =========================
-     AI / ML / DATA SCIENCE
-     ========================= */
-  "Machine Learning",
-  "Deep Learning",
-  "Artificial Intelligence",
-  "Natural Language Processing",
-  "Computer Vision",
-  "Data Analysis",
-  "Data Science",
-  "Statistical Analysis",
-  "Predictive Modeling",
-  "Model Deployment",
-  "MLOps",
+    /* =========================
+       BUSINESS, STRATEGY & MANAGEMENT
+       ========================= */
+    "Business Analysis", "Business Strategy", "Business Development", "Strategic Planning", "Project Management", "Program Management", "Product Management", "Agile Methodologies", "Scrum", "Kanban", "Lean Six Sigma", "Stakeholder Management", "Operations Management", "Process Improvement", "Change Management", "Risk Management", "Supply Chain Management", "Logistics Management", "Vendor Management", "Contract Negotiation", "Entrepreneurship",
 
-  /* =========================
-     CYBERSECURITY
-     ========================= */
-  "Cybersecurity Fundamentals",
-  "Network Security",
-  "Ethical Hacking",
-  "Penetration Testing",
-  "Cryptography",
-  "Risk Assessment",
-  "Security Auditing",
-  "Compliance & Governance",
+    /* =========================
+       FINANCE & ACCOUNTING
+       ========================= */
+    "Accounting", "Financial Analysis", "Financial Modeling", "Corporate Finance", "Budgeting", "Forecasting", "Auditing", "Tax Preparation", "Bookkeeping", "Accounts Payable (AP)", "Accounts Receivable (AR)", "QuickBooks", "SAP ERP", "Oracle Financials", "Risk Analysis", "Wealth Management", "Investment Banking", "Mergers & Acquisitions (M&A)", "Portfolio Management", "Economics",
 
-  /* =========================
-     UI / UX & DESIGN
-     ========================= */
-  "UI/UX Design",
-  "User Research",
-  "Wireframing",
-  "Prototyping",
-  "Figma",
-  "Adobe XD",
-  "Design Thinking",
-  "Accessibility Design",
+    /* =========================
+       MARKETING, SALES & PR
+       ========================= */
+    "Digital Marketing", "Search Engine Optimization (SEO)", "Search Engine Marketing (SEM)", "Content Marketing", "Social Media Marketing", "Email Marketing", "Brand Management", "Market Research", "Public Relations (PR)", "Event Planning", "Advertising", "Google Ads", "Facebook Ads", "Copywriting", "Salesforce", "Customer Relationship Management (CRM)", "B2B Sales", "B2C Sales", "Lead Generation", "Cold Calling", "Account Management", "Sales Management", "E-commerce",
 
-  /* =========================
-     BUSINESS & MANAGEMENT
-     ========================= */
-  "Business Analysis",
-  "Business Strategy",
-  "Product Management",
-  "Project Management",
-  "Agile Methodology",
-  "Scrum",
-  "Stakeholder Management",
-  "Operations Management",
-  "Process Optimization",
+    /* =========================
+       DESIGN, UX/UI & MEDIA
+       ========================= */
+    "User Experience (UX)", "User Interface Design (UI)", "Interaction Design", "Wireframing", "Prototyping", "Figma", "Adobe XD", "Sketch", "Graphic Design", "Typography", "Color Theory", "Adobe Photoshop", "Adobe Illustrator", "InDesign", "Video Editing", "Adobe Premiere Pro", "Final Cut Pro", "Animation", "Adobe After Effects", "Motion Graphics", "3D Modeling", "Blender", "Maya", "Photography", "Audio Editing",
 
-  /* =========================
-     COMMERCE & FINANCE
-     ========================= */
-  "Accounting Basics",
-  "Financial Analysis",
-  "Budgeting",
-  "Cost Management",
-  "Taxation Basics",
-  "Auditing",
-  "Corporate Finance",
-  "Investment Analysis",
-  "Risk Management",
+    /* =========================
+       HR, RECRUITING & PEOPLE
+       ========================= */
+    "Human Resources (HR)", "Talent Acquisition", "Technical Recruiting", "Sourcing", "Interviewing", "Onboarding", "Employee Engagement", "Performance Management", "Employee Relations", "Compensation & Benefits", "Diversity & Inclusion", "HR Policies", "Workday", "Applicant Tracking Systems (ATS)", "Training & Development", "Payroll Administration",
 
-  /* =========================
-     MARKETING & SALES
-     ========================= */
-  "Digital Marketing",
-  "SEO",
-  "Content Marketing",
-  "Social Media Marketing",
-  "Email Marketing",
-  "Brand Management",
-  "Market Research",
-  "Sales Strategy",
-  "Customer Relationship Management",
+    /* =========================
+       LEGAL, COMPLIANCE & GOVERNANCE
+       ========================= */
+    "Legal Writing", "Legal Research", "Contract Drafting", "Corporate Law", "Intellectual Property (IP)", "Litigation", "Compliance", "Regulatory Affairs", "Employment Law", "Privacy Law", "GDPR", "Mediation", "Arbitration", "Paralegal Skills",
 
-  /* =========================
-     ECONOMICS, GEOGRAPHY & POLITICS
-     ========================= */
-  "Economic Analysis",
-  "Public Policy Analysis",
-  "Geopolitical Awareness",
-  "International Relations",
-  "Political Analysis",
-  "Geographical Information Systems (GIS)",
-  "Sustainability Studies",
-  "Climate Impact Analysis",
-  "Urban Planning Basics",
+    /* =========================
+       HEALTHCARE, MEDICAL & SCIENCE
+       ========================= */
+    "Healthcare Management", "Patient Care", "Nursing", "Clinical Research", "Medical Terminology", "Medical Billing", "Medical Coding", "Electronic Health Records (EHR)", "Public Health", "Pharmacy Practice", "Biotechnology", "Life Sciences", "Laboratory Skills", "Data Collection", "First Aid", "CPR", "Patient Safety",
 
-  /* =========================
-     HR & PEOPLE MANAGEMENT
-     ========================= */
-  "Talent Acquisition",
-  "Human Resource Management",
-  "Performance Management",
-  "Employee Engagement",
-  "Organizational Behavior",
-  "Payroll Management",
+    /* =========================
+       EDUCATION, TEACHING & TRAINING
+       ========================= */
+    "Teaching", "Curriculum Development", "Instructional Design", "Higher Education", "Special Education", "E-Learning", "Tutoring", "Educational Technology", "Classroom Management", "Adult Education", "Corporate Training", "Student Affairs",
 
-  /* =========================
-     PERSONAL & PROFESSIONAL SKILLS
-     ========================= */
-  "Communication Skills",
-  "Public Speaking",
-  "Presentation Skills",
-  "Critical Thinking",
-  "Problem Solving",
-  "Decision Making",
-  "Leadership",
-  "Team Collaboration",
-  "Time Management",
-  "Adaptability",
-  "Emotional Intelligence",
-  "Negotiation",
-  "Conflict Resolution",
+    /* =========================
+       ENGINEERING (NON-SOFTWARE) & TRADES
+       ========================= */
+    "Mechanical Engineering", "Electrical Engineering", "Civil Engineering", "AutoCAD", "SolidWorks", "MATLAB", "Manufacturing", "Quality Control", "Quality Assurance", "Architecture", "Construction Management", "Drafting", "Project Engineering", "Plumbing", "Electrical Wiring", "Welding", "Carpentry", "HVAC",
 
-  /* =========================
-     GENERAL MARKET SKILLS
-     ========================= */
-  "Analytical Thinking",
-  "Research Skills",
-  "Documentation",
-  "Report Writing",
-  "MS Excel",
-  "PowerPoint",
-  "Business Writing",
-  "Client Handling",
-  "Entrepreneurial Mindset"
+    /* =========================
+       CUSTOMER SERVICE & ADMIN
+       ========================= */
+    "Customer Service", "Technical Support", "Help Desk Support", "Client Satisfaction", "Complaint Resolution", "Ticketing Systems", "Zendesk", "Call Center Operations", "Administrative Assistance", "Data Entry", "Office Administration", "Microsoft Office Suite", "Microsoft Excel", "Microsoft Word", "PowerPoint", "Google Workspace", "Schedule Management",
+
+    /* =========================
+       SOFT SKILLS & INTERPERSONAL
+       ========================= */
+    "Communication", "Public Speaking", "Presentation Skills", "Leadership", "Team Leadership", "Teamwork", "Collaboration", "Problem Solving", "Critical Thinking", "Analytical Skills", "Decision Making", "Time Management", "Adaptability", "Flexibility", "Emotional Intelligence (EQ)", "Negotiation", "Conflict Resolution", "Interpersonal Skills", "Networking", "Mentoring", "Creativity", "Innovation", "Work Ethic", "Multitasking"
 ];
 
 

@@ -517,6 +517,31 @@ export async function generateRoadmap() {
             })
         );
 
+        // Clean up previous roadmap progress, stats, quizzes and evaluations
+        try {
+            await db.$transaction([
+                db.projectEvaluation.deleteMany({ where: { userId: user.id } }),
+                db.assessment.deleteMany({ where: { userId: user.id, type: "WEEKLY_QUIZ" } }),
+                db.userAchievement.deleteMany({ where: { userId: user.id } }),
+                db.userStats.updateMany({
+                    where: { userId: user.id },
+                    data: {
+                        currentStreak: 0,
+                        longestStreak: 0,
+                        totalXP: 0,
+                        level: 1,
+                        weeklyGoalProgress: 0,
+                        tasksCompleted: 0,
+                        assessmentsTaken: 0,
+                        interviewsPracticed: 0,
+                        certificationsEarned: 0
+                    }
+                })
+            ]);
+        } catch (cleanupError) {
+            console.error("Failed to clean up previous roadmap data:", cleanupError);
+        }
+
         // Save to database
         const roadmap = await db.roadmap.upsert({
             where: { userId: user.id },
@@ -536,6 +561,12 @@ export async function generateRoadmap() {
                 certificationRecs: roadmapData.certifications || [],
                 internshipTimeline: roadmapData.interviewTimeline || {},
                 lastAIGenerated: new Date(),
+                progress: 0.0,
+                currentWeek: 1,
+                completedWeeks: [],
+                completedTasks: [],
+                weeklyProgress: [],
+                taskProgress: {},
             },
         });
 
