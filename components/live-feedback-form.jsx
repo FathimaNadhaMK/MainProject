@@ -5,26 +5,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Star, User, RefreshCw } from "lucide-react";
+import { Send, Star, User, RefreshCw, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useUser, SignInButton } from "@clerk/nextjs";
 
 import { submitReview, getUserReview } from "@/actions/reviews";
 
 export default function LiveFeedbackForm() {
     const [rating, setRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
-    const [name, setName] = useState("");
     const [review, setReview] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const { toast } = useToast();
+    const { isSignedIn, isLoaded } = useUser();
 
     useEffect(() => {
         async function fetchExistingReview() {
             const existing = await getUserReview();
             if (existing) {
                 setRating(existing.rating);
-                setName(existing.name !== "Anonymous User" ? existing.name : "");
                 setReview(existing.review);
                 setIsEditing(true);
             }
@@ -55,7 +55,7 @@ export default function LiveFeedbackForm() {
 
         setIsSubmitting(true);
 
-        const res = await submitReview({ rating, name, review });
+        const res = await submitReview({ rating, review });
 
         setIsSubmitting(false);
 
@@ -92,76 +92,76 @@ export default function LiveFeedbackForm() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form onSubmit={handleSubmit} className="space-y-6">
-
-                            {/* Star Rating */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Overall Rating</label>
-                                <div className="flex gap-1" onMouseLeave={() => setHoverRating(0)}>
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                        <button
-                                            key={star}
-                                            type="button"
-                                            className={`transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded-full p-1`}
-                                            onClick={() => setRating(star)}
-                                            onMouseEnter={() => setHoverRating(star)}
-                                        >
-                                            <Star
-                                                className={`h-8 w-8 ${(hoverRating || rating) >= star
-                                                    ? "fill-primary text-primary"
-                                                    : "text-muted-foreground/40"
-                                                    } transition-all`}
-                                            />
-                                        </button>
-                                    ))}
-                                </div>
+                        {!isLoaded ? (
+                            <div className="flex justify-center p-8">
+                                <span className="h-8 w-8 rounded-full border-4 border-primary border-t-transparent animate-spin"></span>
                             </div>
+                        ) : !isSignedIn ? (
+                            <div className="text-center space-y-4 py-8">
+                                <p className="text-muted-foreground">You must be signed in to submit a review.</p>
+                                <SignInButton mode="redirect" forceRedirectUrl="/">
+                                    <Button className="w-full sm:w-auto mt-2">
+                                        <LogIn className="mr-2 h-4 w-4" /> Sign In to Review
+                                    </Button>
+                                </SignInButton>
+                            </div>
+                        ) : (
+                            <form onSubmit={handleSubmit} className="space-y-6">
 
-                            {/* Name Input */}
-                            <div className="space-y-2">
-                                <label htmlFor="name" className="text-sm font-medium">Name (Optional)</label>
-                                <div className="relative">
-                                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="name"
-                                        placeholder="John Doe"
-                                        className="pl-10 bg-background"
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
+                                {/* Star Rating */}
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Overall Rating</label>
+                                    <div className="flex gap-1" onMouseLeave={() => setHoverRating(0)}>
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                            <button
+                                                key={star}
+                                                type="button"
+                                                className={`transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded-full p-1`}
+                                                onClick={() => setRating(star)}
+                                                onMouseEnter={() => setHoverRating(star)}
+                                            >
+                                                <Star
+                                                    className={`h-8 w-8 ${(hoverRating || rating) >= star
+                                                        ? "fill-primary text-primary"
+                                                        : "text-muted-foreground/40"
+                                                        } transition-all`}
+                                                />
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Review Textarea */}
+                                <div className="space-y-2">
+                                    <label htmlFor="review" className="text-sm font-medium">Your Review <span className="text-red-500">*</span></label>
+                                    <Textarea
+                                        id="review"
+                                        placeholder="Tell us what you liked or how we can improve..."
+                                        className="min-h-[120px] resize-y bg-background"
+                                        value={review}
+                                        onChange={(e) => setReview(e.target.value)}
                                     />
                                 </div>
-                            </div>
 
-                            {/* Review Textarea */}
-                            <div className="space-y-2">
-                                <label htmlFor="review" className="text-sm font-medium">Your Review <span className="text-red-500">*</span></label>
-                                <Textarea
-                                    id="review"
-                                    placeholder="Tell us what you liked or how we can improve..."
-                                    className="min-h-[120px] resize-y bg-background"
-                                    value={review}
-                                    onChange={(e) => setReview(e.target.value)}
-                                />
-                            </div>
-
-                            <Button
-                                type="submit"
-                                className="w-full"
-                                disabled={isSubmitting}
-                            >
-                                {isSubmitting ? (
-                                    <span className="flex items-center gap-2">
-                                        <span className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin"></span>
-                                        {isEditing ? "Updating..." : "Submitting..."}
-                                    </span>
-                                ) : (
-                                    <span className="flex items-center gap-2">
-                                        {isEditing ? <RefreshCw className="h-4 w-4" /> : <Send className="h-4 w-4" />}
-                                        {isEditing ? "Update Feedback" : "Submit Feedback"}
-                                    </span>
-                                )}
-                            </Button>
-                        </form>
+                                <Button
+                                    type="submit"
+                                    className="w-full"
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? (
+                                        <span className="flex items-center gap-2">
+                                            <span className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin"></span>
+                                            {isEditing ? "Updating..." : "Submitting..."}
+                                        </span>
+                                    ) : (
+                                        <span className="flex items-center gap-2">
+                                            {isEditing ? <RefreshCw className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+                                            {isEditing ? "Update Feedback" : "Submit Feedback"}
+                                        </span>
+                                    )}
+                                </Button>
+                            </form>
+                        )}
                     </CardContent>
                 </Card>
             </div>
