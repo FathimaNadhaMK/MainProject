@@ -176,6 +176,7 @@ model Interview {
   mode             String?      // "audio" | "video"
   recruiterProfile Json?        // full persona object
   config           Json?        // any additional settings (e.g. focusAreas)
+  focusAreas       Json?        // derived skill/topic priorities for interview
   resumeSnapshot   Json?        // store resume content or profile fallback
 
   // conversation state (updated each turn)
