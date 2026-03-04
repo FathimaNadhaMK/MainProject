@@ -21,8 +21,24 @@ import { features } from "@/data/features";
 import { testimonial } from "@/data/testimonial";
 import { faqs } from "@/data/faqs";
 import { howItWorks } from "@/data/howItWorks";
+import LiveFeedbackForm from "@/components/live-feedback-form";
+import { getLatestReviews } from "@/actions/reviews";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const latestReviews = await getLatestReviews();
+
+  // Map our DB reviews to match the UI shape of static testimonials, padded to 3 length
+  const displayReviews = [
+    ...latestReviews.map(r => ({
+      author: r.name || "Anonymous User",
+      role: "Platform User",
+      company: Array.from({ length: 5 }).map((_, i) => (i < r.rating ? "★" : "☆")).join(""),
+      quote: r.review,
+      // Use ui-avatars for dynamic random avatars
+      image: `https://ui-avatars.com/api/?name=${encodeURIComponent(r.name || 'A')}&background=random&color=fff`
+    })),
+    ...testimonial
+  ].slice(0, 3);
   return (
     <>
       <div className="grid-background"></div>
@@ -114,7 +130,7 @@ export default function LandingPage() {
             What Our Users Say
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {testimonial.map((testimonial, index) => (
+            {displayReviews.map((testimonial, index) => (
               <Card key={index} className="bg-background">
                 <CardContent className="pt-6">
                   <div className="flex flex-col space-y-4">
@@ -183,6 +199,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Live Feedback / Review Form */}
+      <LiveFeedbackForm />
 
       {/* CTA Section */}
       <section className="w-full">

@@ -41,6 +41,7 @@ model User {
   jobMatches            UserJobMatch[]
   matchPreferences      UserMatchPreference?
   projectEvaluations    ProjectEvaluation[]
+  review                Review?
 
   @@index([clerkUserId])
   @@index([email])
@@ -512,4 +513,14 @@ model ProjectEvaluation {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String?  @unique // Nullable if they are truly anonymous, but unique to prevent a user ID reviewing multi times
+  rating    Int
+  name      String?  @default("Anonymous User")
+  review    String   @db.Text
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

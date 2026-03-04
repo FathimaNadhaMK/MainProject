@@ -2,7 +2,8 @@
 
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { z } from "zod";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // Switch to gemini-2.5-flash
@@ -28,28 +29,57 @@ export async function generateQuiz() {
     }.
     
     Each question should be multiple choice with 4 options.
-    
-    Return the response in this JSON format only, no additional text:
-    {
-      "questions": [
-        {
-          "question": "string",
-          "options": ["string", "string", "string", "string"],
-          "correctAnswer": "string",
-          "explanation": "string"
-        }
-      ]
-    }
   `;
 
+  const generationConfig = {
+    responseMimeType: "application/json",
+    responseSchema: {
+      type: SchemaType.OBJECT,
+      properties: {
+        questions: {
+          type: SchemaType.ARRAY,
+          items: {
+            type: SchemaType.OBJECT,
+            properties: {
+              question: { type: SchemaType.STRING },
+              options: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+              correctAnswer: { type: SchemaType.STRING },
+              explanation: { type: SchemaType.STRING },
+            },
+            required: ["question", "options", "correctAnswer", "explanation"],
+          },
+        },
+      },
+      required: ["questions"],
+    },
+  };
+
+  const quizSchema = z.object({
+    questions: z.array(
+      z.object({
+        question: z.string(),
+        options: z.array(z.string()).length(4),
+        correctAnswer: z.string(),
+        explanation: z.string(),
+      })
+    ),
+  });
+
   try {
-    const result = await model.generateContent(prompt);
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig,
+    });
     const response = result.response;
     const text = response.text();
-    const cleanedText = text.replace(/```(?:json)?\n?/g, "").trim();
-    const quiz = JSON.parse(cleanedText);
 
-    return quiz.questions;
+    // The response is guaranteed to be a JSON string by the Gemini API and responseSchema
+    const parsedData = JSON.parse(text);
+
+    // Zod validation to ensure perfectly typed schema matches the frontend expectations
+    const validatedQuiz = quizSchema.parse(parsedData);
+
+    return validatedQuiz.questions;
   } catch (error) {
     console.error("Error generating quiz:", error);
     throw new Error("Failed to generate quiz questions");
