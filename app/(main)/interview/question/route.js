@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-
-import { NextResponse } from "next/server";
 import { getNextQuestion } from "@/interview/orchestrator";
 
 export async function POST(req) {

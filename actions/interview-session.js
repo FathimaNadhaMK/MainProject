@@ -4,8 +4,12 @@ import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { recruiters } from "@/lib/recruiters";
 import { checkUser } from "@/lib/checkUser";
+import { createRequire } from "module";
 
-export async function createInterviewSession({ mode, recruiterId, recruiterProfile }) {
+const require = createRequire(import.meta.url);
+const pdfParse = require("pdf-parse/lib/pdf-parse.js");
+
+export async function createInterviewSession({ mode, recruiterId, recruiterProfile, resumeText }) {
   const { userId: clerkUserId } = await auth();
   if (!clerkUserId) throw new Error("Unauthorized");
 
@@ -48,8 +52,8 @@ export async function createInterviewSession({ mode, recruiterId, recruiterProfi
   const domain = (user.industry || "").toLowerCase().includes("tech")
     ? "technology"
     : (user.industry || "").toLowerCase().includes("bank")
-    ? "banking"
-    : "non-tech";
+      ? "banking"
+      : "non-tech";
 
   const targetRole = user.targetRole || "General";
 
@@ -79,7 +83,7 @@ export async function createInterviewSession({ mode, recruiterId, recruiterProfi
 
   // extract resume content for interview context
   // fallback to user profile info if no resume content exists
-  const resumeContent = user.resume?.content || `Name: ${user.name || "User"}
+  const resumeContent = resumeText || user.resume?.content || `Name: ${user.name || "User"}
 Industry: ${user.industry || "Not specified"}
 Target Role: ${user.targetRole || "Not specified"}
 Background: ${user.background || "Not provided"}`
@@ -96,8 +100,8 @@ Background: ${user.background || "Not provided"}`
       mode, // audio / video
       recruiterProfile: recruiter,
       resumeSnapshot: { content: resumeContent },
-      focusAreas,
       config: {
+        focusAreas,
         domain,
         targetRole,
         interviewMode: mode,
@@ -131,7 +135,6 @@ export async function fetchInterviewSession(sessionId) {
       recruiterProfile: true,
       config: true,
       difficulty: true,
-      focusAreas: true,
       resumeSnapshot: true,
     },
   });
@@ -161,4 +164,22 @@ export async function saveInterviewResult(sessionId, result) {
   });
 
   return interview;
+}
+
+// Server action to extract text from a PDF file
+export async function extractPdfText(formData) {
+  try {
+    const file = formData.get("file");
+    if (!file) {
+      throw new Error("No file uploaded");
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const data = await pdfParse(buffer);
+    return data.text;
+  } catch (error) {
+    console.error("Error parsing PDF:", error);
+    throw new Error("Failed to parse PDF resume");
+  }
 }
