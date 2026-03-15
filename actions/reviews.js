@@ -4,42 +4,45 @@ import { db } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
 import { auth } from "@clerk/nextjs/server";
+import { checkUser } from "@/lib/checkUser";
 
 export async function submitReview(data) {
     try {
         const { userId } = await auth();
-        const { name, rating, review } = data;
 
-        let userRecord = null;
-        if (userId) {
-            userRecord = await db.user.findUnique({ where: { clerkUserId: userId } });
+        if (!userId) {
+            return { success: false, error: "You must be logged in to submit a review." };
+        }
 
-            if (userRecord) {
-                const existingReview = await db.review.findUnique({
-                    where: { userId: userRecord.id }
+        const { rating, review } = data;
+
+        const userRecord = await checkUser();
+
+        if (userRecord) {
+            const existingReview = await db.review.findUnique({
+                where: { userId: userRecord.id }
+            });
+
+            if (existingReview) {
+                await db.review.update({
+                    where: { id: existingReview.id },
+                    data: {
+                        name: userRecord.name || "Platform User",
+                        rating,
+                        review
+                    }
                 });
-
-                if (existingReview) {
-                    await db.review.update({
-                        where: { id: existingReview.id },
-                        data: {
-                            name: name || "Anonymous User",
-                            rating,
-                            review
-                        }
-                    });
-                    revalidatePath("/");
-                    return { success: true, message: "Review updated successfully!" };
-                }
+                revalidatePath("/");
+                return { success: true, message: "Review updated successfully!" };
             }
         }
 
         await db.review.create({
             data: {
-                name: name || "Anonymous User",
+                name: userRecord?.name || "Platform User",
                 rating,
                 review,
-                ...(userRecord && { userId: userRecord.id })
+                userId: userRecord.id
             }
         });
 
@@ -56,7 +59,7 @@ export async function getUserReview() {
         const { userId } = await auth();
         if (!userId) return null;
 
-        const userRecord = await db.user.findUnique({ where: { clerkUserId: userId } });
+        const userRecord = await checkUser();
         if (!userRecord) return null;
 
         const review = await db.review.findUnique({
