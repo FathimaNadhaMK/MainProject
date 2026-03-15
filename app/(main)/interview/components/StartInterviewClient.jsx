@@ -123,11 +123,10 @@ export default function StartInterviewClient() {
         {/* resume upload */}
         <section>
           <label className="block text-sm font-medium text-gray-300 mb-2">
-            Resume <span className="text-gray-500">(Optional)</span>
+            Resume <span className="text-red-400 font-bold">* (Required)</span>
           </label>
           <p className="text-xs text-gray-400 mb-3">
-            Upload your resume to get more personalized questions. If you don't have one uploaded,
-            <a href="/dashboard" className="text-blue-400 hover:text-blue-300 ml-1">manage it here</a>.
+            You must upload your resume in PDF format. This is required to begin the mock interview and configure exactly what the AI will ask you.
           </p>
           <div
             onDrop={onDrop}
@@ -171,8 +170,8 @@ export default function StartInterviewClient() {
                 key={option.key}
                 onClick={() => setMode(option.key)}
                 className={`flex-1 border rounded-lg p-6 flex flex-col items-center gap-2 transition shadow-sm hover:shadow-md focus:outline-none ${mode === option.key
-                    ? "border-blue-500 bg-blue-800"
-                    : "border-gray-700 bg-gray-800"
+                  ? "border-blue-500 bg-blue-800"
+                  : "border-gray-700 bg-gray-800"
                   }`}
               >
                 <span className="text-2xl">{option.icon}</span>
@@ -212,8 +211,8 @@ export default function StartInterviewClient() {
                       key={r.id}
                       onClick={() => setSelectedRecruiter(r)}
                       className={`cursor-pointer border rounded-lg p-4 flex items-center gap-4 transition shadow-sm hover:shadow-md ${selectedRecruiter?.id === r.id
-                          ? "border-blue-500 bg-blue-800 ring-2 ring-blue-300"
-                          : "border-gray-700 bg-gray-800"
+                        ? "border-blue-500 bg-blue-800 ring-2 ring-blue-300"
+                        : "border-gray-700 bg-gray-800"
                         }`}
                     >
                       <img
@@ -241,7 +240,7 @@ export default function StartInterviewClient() {
         {/* start button */}
         <div className="flex justify-end">
           <button
-            disabled={!mode || !selectedRecruiter || loading}
+            disabled={!resumeFile || !mode || !selectedRecruiter || loading}
             onClick={startInterview}
             className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
