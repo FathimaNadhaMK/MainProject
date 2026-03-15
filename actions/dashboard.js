@@ -19,8 +19,8 @@ export async function generateAIInsights(userData) {
 
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    // Use gemini-2.5-flash for better performance and speed
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    // Use gemini-3-flash for better performance and speed
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
     const prompt = `
       You are a senior career advisor and Labor Market Specialist. 

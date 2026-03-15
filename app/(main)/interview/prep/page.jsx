@@ -1,7 +1,7 @@
 import { getRoadmap } from "@/actions/roadmap";
 import { getUserOnboardingStatus } from "@/actions/user";
 import { redirect } from "next/navigation";
-import PhaseView from "../_components/phase-view";
+import PhaseView from "../../roadmap/_components/phase-view";
 
 export default async function InterviewPrepPage() {
     const onboardingStatus = await getUserOnboardingStatus();

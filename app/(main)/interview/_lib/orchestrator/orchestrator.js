@@ -15,7 +15,7 @@ import { questionPrompt, evaluationPrompt } from "./prompts";
 
 // shared model instance
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
 // helper to infer turn number from stored state or conversation array
 function computeTurn(session, conversation) {
@@ -32,39 +32,27 @@ function buildPriorityList(session) {
   const list = [];
   const cfg = session.config || {};
 
-  // 1. resume projects/experiences – assume resumeSnapshot.projects array
-  if (session.resumeSnapshot?.projects) {
-    for (const p of session.resumeSnapshot.projects) {
-      list.push({ type: "project", value: p });
-    }
+  // 1. resume projects/experiences – assume resumeSnapshot contains content
+  if (session.resumeSnapshot?.content) {
+    list.push({ type: "resume", value: session.resumeSnapshot.content });
   }
 
-  // 2. weak skills from config
+  // 2. target role / industry context
+  if (cfg.targetRole) {
+    list.push({ type: "careerGoal", value: cfg.targetRole });
+  }
+
+  // 3. weak skills from config (if any)
   if (cfg.weakSkills && Array.isArray(cfg.weakSkills)) {
     for (const s of cfg.weakSkills) {
       list.push({ type: "weakSkill", value: s });
     }
   }
 
-  // 3. pending roadmap topics
-  if (cfg.pendingTopics && Array.isArray(cfg.pendingTopics)) {
-    for (const t of cfg.pendingTopics) {
-      list.push({ type: "pendingTopic", value: t });
-    }
-  }
-
-  // 4. career goal / target role
-  if (cfg.careerGoal) {
-    list.push({ type: "careerGoal", value: cfg.careerGoal });
-  }
-
-  // 5. fallbacks
-  list.push({ type: "general", value: "" });
-
   return list;
 }
 
-export async function getNextQuestion({ sessionId, conversation = [] }) {
+export async function getNextQuestion({ sessionId, conversation = [], timeRemaining }) {
   const session = await db.interview.findUnique({
     where: { id: sessionId },
   });
@@ -87,6 +75,7 @@ export async function getNextQuestion({ sessionId, conversation = [] }) {
     intent,
     recruiterProfile: session.recruiterProfile || { name: "Recruiter" },
     turn,
+    timeRemaining,
   });
 
   const res = await model.generateContent(prompt);

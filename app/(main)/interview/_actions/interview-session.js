@@ -7,9 +7,9 @@ import { checkUser } from "@/lib/checkUser";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
-const pdfParse = require("pdf-parse/lib/pdf-parse.js");
+const pdfParse = require("pdf-parse");
 
-export async function createInterviewSession({ mode, recruiterId, recruiterProfile, resumeText }) {
+export async function createInterviewSession({ mode, recruiterId, recruiterProfile, resumeText, duration }) {
   const { userId: clerkUserId } = await auth();
   if (!clerkUserId) throw new Error("Unauthorized");
 
@@ -109,6 +109,7 @@ Background: ${user.background || "Not provided"}`
         weakSkills,
         pendingTopics,
         careerGoal: targetRole,
+        duration: duration || 300,
       },
 
       // initialize orchestration state

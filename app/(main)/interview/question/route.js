@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getNextQuestion } from "@/interview/orchestrator";
+import { getNextQuestion } from "../_lib/orchestrator/orchestrator";
 
 export async function POST(req) {
   const { sessionId, conversation } = await req.json();

@@ -6,8 +6,8 @@ import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { z } from "zod";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// Switch to gemini-2.5-flash
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+// Switch to gemini-3-flash
+const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
 export async function generateQuiz() {
   const { userId } = await auth();
