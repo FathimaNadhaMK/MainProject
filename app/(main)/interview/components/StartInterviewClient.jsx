@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createInterviewSession } from "@/actions/interview-session";
+import { createInterviewSession, extractPdfText } from "@/actions/interview-session";
 import { getInterviewContext } from "@/actions/user";
 
 // recruiter data will be generated based on onboarding context
@@ -56,9 +56,17 @@ export default function StartInterviewClient() {
     }
     setLoading(true);
     try {
+      let resumeText = null;
+      if (resumeFile) {
+        const formData = new FormData();
+        formData.append("file", resumeFile);
+        resumeText = await extractPdfText(formData);
+      }
+
       const interviewId = await createInterviewSession({
         mode,
         recruiterProfile: selectedRecruiter,
+        resumeText,
       });
       router.push(`/interview/session/${interviewId}`);
     } catch (err) {
@@ -128,9 +136,8 @@ export default function StartInterviewClient() {
               setDragActive(true);
             }}
             onDragLeave={() => setDragActive(false)}
-            className={`relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer ${
-              dragActive ? "border-blue-400 bg-blue-800" : "border-gray-700 bg-gray-800"
-            }`}
+            className={`relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer ${dragActive ? "border-blue-400 bg-blue-800" : "border-gray-700 bg-gray-800"
+              }`}
             onClick={() => fileInputRef.current?.click()}
           >
             <input
@@ -163,11 +170,10 @@ export default function StartInterviewClient() {
               <button
                 key={option.key}
                 onClick={() => setMode(option.key)}
-                className={`flex-1 border rounded-lg p-6 flex flex-col items-center gap-2 transition shadow-sm hover:shadow-md focus:outline-none ${
-                  mode === option.key
+                className={`flex-1 border rounded-lg p-6 flex flex-col items-center gap-2 transition shadow-sm hover:shadow-md focus:outline-none ${mode === option.key
                     ? "border-blue-500 bg-blue-800"
                     : "border-gray-700 bg-gray-800"
-                }`}
+                  }`}
               >
                 <span className="text-2xl">{option.icon}</span>
                 <span className="text-gray-200 font-semibold">
@@ -205,11 +211,10 @@ export default function StartInterviewClient() {
                     <div
                       key={r.id}
                       onClick={() => setSelectedRecruiter(r)}
-                      className={`cursor-pointer border rounded-lg p-4 flex items-center gap-4 transition shadow-sm hover:shadow-md ${
-                        selectedRecruiter?.id === r.id
+                      className={`cursor-pointer border rounded-lg p-4 flex items-center gap-4 transition shadow-sm hover:shadow-md ${selectedRecruiter?.id === r.id
                           ? "border-blue-500 bg-blue-800 ring-2 ring-blue-300"
                           : "border-gray-700 bg-gray-800"
-                      }`}
+                        }`}
                     >
                       <img
                         src={r.avatar}
