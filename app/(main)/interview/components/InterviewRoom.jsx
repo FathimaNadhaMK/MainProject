@@ -1,6 +1,8 @@
 "use client";
 
+import 'regenerator-runtime/runtime';
 import { useEffect, useRef, useState } from "react";
+import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
 import {
   generateNextQuestion,
   generateInterviewFeedback,
@@ -12,6 +14,7 @@ export default function InterviewRoom({ sessionId }) {
   const audioContextRef = useRef(null);
   const analyzerRef = useRef(null);
   const streamRef = useRef(null);
+  const videoRef = useRef(null);
 
   const [conversation, setConversation] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState("");
@@ -25,37 +28,82 @@ export default function InterviewRoom({ sessionId }) {
   const [audioLevel, setAudioLevel] = useState(0);
   const [microphoneError, setMicrophoneError] = useState(null);
   const [recruiterSpeaking, setRecruiterSpeaking] = useState(false);
+  const [mode, setMode] = useState("audio");
+
+  const {
+    transcript,
+    listening,
+    resetTranscript,
+    browserSupportsSpeechRecognition,
+  } = useSpeechRecognition();
 
   const MAX_TURNS = 6;
 
   useEffect(() => {
-    if (!callStarted) return;
-    
-    setCurrentQuestion("Please introduce yourself and tell me about your background.");
-    // load configuration for optional UI tweaks (e.g. show recruiter name)
     (async () => {
       try {
         const cfg = await fetchInterviewConfig(sessionId);
         if (cfg?.recruiterProfile?.name) {
           setRecruiterName(cfg.recruiterProfile.name);
         }
+        if (cfg?.mode) {
+          setMode(cfg.mode);
+        }
       } catch (e) {
         console.warn("could not load interview config", e);
       }
     })();
-  }, [sessionId, callStarted]);
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!callStarted) return;
+    setCurrentQuestion("Please introduce yourself and tell me about your background.");
+  }, [callStarted]);
+
+  useEffect(() => {
+    if (!callStarted) return;
+    setCurrentQuestion("Please introduce yourself and tell me about your background.");
+  }, [callStarted]);
 
   async function startCall() {
     try {
       setMicrophoneError(null);
-      // Request microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: false,
-        },
-      });
+
+      // Ensure we have latest mode from DB if state hasn't updated
+      let currentMode = mode;
+      try {
+        const cfg = await fetchInterviewConfig(sessionId);
+        if (cfg?.mode) currentMode = cfg.mode;
+      } catch (e) {
+        console.warn("Could not double-check mode", e);
+      }
+
+      // Request microphone and video access
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: false,
+          },
+          video: currentMode === "video" ? { facingMode: "user" } : false,
+        });
+      } catch (err) {
+        if (currentMode === "video") {
+          console.warn("Video access failed, falling back to audio only", err);
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: false,
+            },
+            video: false,
+          });
+        } else {
+          throw err;
+        }
+      }
       streamRef.current = stream;
 
       // Create audio context for audio level monitoring
@@ -105,7 +153,7 @@ export default function InterviewRoom({ sessionId }) {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
     }
-    if (audioContextRef.current) {
+    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
       audioContextRef.current.close();
     }
     setFinished(true);
@@ -172,7 +220,7 @@ export default function InterviewRoom({ sessionId }) {
   // Pre-call screen
   if (!callStarted) {
     return (
-      <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white flex items-center justify-center p-6">
         <div className="max-w-md w-full text-center space-y-8">
           <div>
             <h1 className="text-4xl font-bold mb-2">Ready to Interview?</h1>
@@ -185,7 +233,7 @@ export default function InterviewRoom({ sessionId }) {
               <ul className="text-sm text-gray-400 space-y-2">
                 <li>✓ Find a quiet location</li>
                 <li>✓ Ensure good lighting</li>
-                <li>✓ Allow microphone access</li>
+                <li>✓ Allow {mode === "video" ? "camera and microphone" : "microphone"} access</li>
                 <li>✓ Test your audio</li>
               </ul>
             </div>
@@ -199,9 +247,10 @@ export default function InterviewRoom({ sessionId }) {
 
           <button
             onClick={startCall}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition"
+            disabled={!recruiterName}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition disabled:opacity-50 disabled:cursor-wait"
           >
-            Start Interview
+            {recruiterName ? "Start Interview" : "Loading Session..."}
           </button>
         </div>
       </div>
@@ -211,7 +260,7 @@ export default function InterviewRoom({ sessionId }) {
   // Feedback screen
   if (finished && feedback) {
     return (
-      <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white flex items-center justify-center p-6">
         <div className="max-w-2xl w-full">
           <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-8 space-y-6">
             <div>
@@ -264,7 +313,7 @@ export default function InterviewRoom({ sessionId }) {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white flex flex-col">
       {/* Header */}
       <div className="flex justify-between items-center px-6 py-4 border-b border-gray-700">
         <div>
@@ -280,9 +329,8 @@ export default function InterviewRoom({ sessionId }) {
       <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-8">
         {/* Recruiter card */}
         <div className="max-w-2xl w-full">
-          <div className={`bg-gray-800/50 border-2 rounded-xl p-8 transition ${
-            recruiterSpeaking ? "border-blue-500 bg-gray-800" : "border-gray-700"
-          }`}>
+          <div className={`bg-gray-800/50 border-2 rounded-xl p-8 transition ${recruiterSpeaking ? "border-blue-500 bg-gray-800" : "border-gray-700"
+            }`}>
             <div className="flex items-center gap-4 mb-6">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                 <span className="text-2xl">🤖</span>
@@ -314,9 +362,28 @@ export default function InterviewRoom({ sessionId }) {
           </div>
         </div>
 
-        {/* Candidate audio visualizer */}
+        {/* Candidate audio/video visualizer */}
         <div className="max-w-2xl w-full">
           <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
+            {mode === "video" && (
+              <div className="mb-4 w-full aspect-video bg-black rounded-lg overflow-hidden border border-gray-700 relative">
+                <video
+                  ref={(element) => {
+                    videoRef.current = element;
+                    if (element && streamRef.current && !element.srcObject) {
+                      element.srcObject = streamRef.current;
+                      element.onloadedmetadata = () => {
+                        element.play().catch(e => console.error("video play root err", e));
+                      }
+                    }
+                  }}
+                  muted
+                  playsInline
+                  autoPlay
+                  className="w-full h-full object-cover scale-x-[-1]"
+                />
+              </div>
+            )}
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
                 <span className="text-xl">🎤</span>
@@ -336,35 +403,79 @@ export default function InterviewRoom({ sessionId }) {
       </div>
 
       {/* Controls */}
-      <div className="p-6 flex justify-center gap-4 border-t border-gray-700">
-        <button
-          onClick={toggleMute}
-          className={`px-6 py-3 rounded-full font-semibold transition ${
-            isMuted
+      <div className="p-6 flex flex-col justify-center items-center gap-4 border-t border-gray-700">
+        <div className="w-full max-w-2xl bg-gray-900 border border-gray-700 rounded-lg p-4 min-h-[80px]">
+          <p className="text-gray-300">
+            {listening && (
+              <span className="text-red-400 font-bold animate-pulse mr-2">
+                ● Recording...
+              </span>
+            )}
+            {transcript || (
+              <span className="text-gray-600 italic">
+                {browserSupportsSpeechRecognition
+                  ? "Your spoken answer will appear here..."
+                  : "Speech recognition is not supported in this browser. You can still type below."}
+              </span>
+            )}
+          </p>
+        </div>
+
+        <div className="flex gap-4">
+          <button
+            onClick={toggleMute}
+            className={`px-6 py-3 rounded-full font-semibold transition ${isMuted
               ? "bg-red-600/20 border border-red-600 text-red-400 hover:bg-red-600/30"
               : "bg-gray-700 hover:bg-gray-600 text-white"
-          }`}
-        >
-          {isMuted ? "🔇 Unmute" : "🎤 Mute"}
-        </button>
+              }`}
+          >
+            {isMuted ? "🔇 Unmute" : "🎤 Mute"}
+          </button>
 
-        <button
-          onClick={() => {
-            const answer = prompt("Describe your response:");
-            if (answer) submitAnswer(answer);
-          }}
-          disabled={recruiterSpeaking}
-          className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-full font-semibold transition"
-        >
-          Submit Answer
-        </button>
+          {!listening ? (
+            <button
+              onClick={() => {
+                if (browserSupportsSpeechRecognition) {
+                  SpeechRecognition.startListening({ continuous: true });
+                } else {
+                  const ans = prompt("Speech recognition unsupported. Type response:");
+                  if (ans) submitAnswer(ans);
+                }
+              }}
+              disabled={recruiterSpeaking}
+              className="px-8 py-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-full font-semibold transition"
+            >
+              Start Recording Answer
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                SpeechRecognition.stopListening();
+                if (transcript.trim()) {
+                  submitAnswer(transcript.trim());
+                  resetTranscript();
+                } else {
+                  console.warn("No speech captured by SpeechRecognition.");
+                  const ans = prompt("No speech captured. You can type your response instead:");
+                  if (ans) {
+                    submitAnswer(ans);
+                  }
+                }
+              }}
+              disabled={recruiterSpeaking}
+              className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-full font-semibold transition animate-pulse"
+            >
+              Finish & Submit
+            </button>
+          )}
 
-        <button
-          onClick={endCall}
-          className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-semibold transition"
-        >
-          📞 End Call
-        </button>
+          <button
+            onClick={endCall}
+            className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-semibold transition"
+          >
+            📞 End Call
+          </button>
+        </div>
       </div>
     </div>
   );

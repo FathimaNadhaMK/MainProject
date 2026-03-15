@@ -1,0 +1,20 @@
+// app/api/save-cover-letter/route.js
+import { db } from "@/lib/prisma";
+import { auth } from "@clerk/nextjs/server";
+
+export async function POST(req) {
+  try {
+    const { company, position, content } = await req.json();
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
+
+    await db.coverLetter.create({
+      data: { userId, company, position, content },
+    });
+
+    return new Response(JSON.stringify({ success: true }));
+  } catch (err) {
+    console.error(err);
+    return new Response(JSON.stringify({ error: "Failed to save cover letter" }), { status: 500 });
+  }
+}
