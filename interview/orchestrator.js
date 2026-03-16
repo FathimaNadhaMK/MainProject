@@ -11,7 +11,7 @@ import {
   intentForPhase,
   adjustForPersona,
 } from "./orchestrator-rules";
-import { questionPrompt, evaluationPrompt } from "./prompts";
+import { questionPrompt, evaluationPrompt, answerFeedbackPrompt } from "./prompts";
 
 // shared model instance
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -64,7 +64,7 @@ function buildPriorityList(session) {
   return list;
 }
 
-export async function getNextQuestion({ sessionId, conversation = [] }) {
+export async function getNextQuestion({ sessionId, conversation = [], imageBase64 = null }) {
   const session = await db.interview.findUnique({
     where: { id: sessionId },
   });
@@ -89,7 +89,18 @@ export async function getNextQuestion({ sessionId, conversation = [] }) {
     turn,
   });
 
-  const res = await model.generateContent(prompt);
+  const parts = [{ text: prompt }];
+
+  if (imageBase64) {
+    parts.push({
+      inlineData: {
+        data: imageBase64,
+        mimeType: "image/jpeg",
+      },
+    });
+  }
+
+  const res = await model.generateContent(parts);
   const questionText = (await res.response.text()).trim();
 
   // persist updated state (save conversation if provided, bump turn, etc.)
@@ -110,6 +121,34 @@ export async function getNextQuestion({ sessionId, conversation = [] }) {
     difficulty,
     phase,
   };
+}
+
+export async function getAnswerFeedback({ sessionId, conversation = [], imageBase64 = null }) {
+  const session = await db.interview.findUnique({
+    where: { id: sessionId },
+  });
+  if (!session) throw new Error("Interview session not found");
+
+  const prompt = answerFeedbackPrompt({
+    conversation,
+    recruiterProfile: session.recruiterProfile || { name: "Recruiter" },
+  });
+
+  const parts = [{ text: prompt }];
+
+  if (imageBase64) {
+    parts.push({
+      inlineData: {
+        data: imageBase64,
+        mimeType: "image/jpeg",
+      },
+    });
+  }
+
+  const res = await model.generateContent(parts);
+  const text = (await res.response.text()).trim();
+
+  return { feedback: text };
 }
 
 export async function evaluateInterview({ sessionId, conversation = [] }) {

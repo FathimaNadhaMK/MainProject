@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     MapPin,
@@ -21,19 +21,25 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { updateJobMatchStatus } from "@/actions/jobs";
-import MatchBreakdown from "./match-breakdown";
-import GapAnalysisCard from "./gap-analysis-card";
+import { updateJobMatchStatus, getGapAnalysisForJob } from "@/actions/jobs";
+import dynamic from "next/dynamic";
+
+const MatchBreakdown = dynamic(() => import("./match-breakdown"), { ssr: false });
+const GapAnalysisCard = dynamic(() => import("./gap-analysis-card"), { ssr: false });
 
 export default function JobCard({ match }) {
     const [status, setStatus] = useState(match.status);
     const [showDetails, setShowDetails] = useState(false);
     const [isPending, startTransition] = useTransition();
+    
+    // New state for lazy loaded match metrics
+    const [detailedMatch, setDetailedMatch] = useState(null);
+    const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
     const job = match.job;
     const score = match.matchScore;
 
-    // Score-based color
+    // ... color/label getters remain identical
     const getScoreColor = () => {
         if (score >= 90) return "text-green-400";
         if (score >= 75) return "text-blue-400";
@@ -71,6 +77,27 @@ export default function JobCard({ match }) {
                 toast.error("Failed to update status");
             }
         });
+    };
+    
+    const handleToggleDetails = async () => {
+      const willShow = !showDetails;
+      setShowDetails(willShow);
+      
+      // Lazily fetch the heavy graph data only when opened
+      if (willShow && !detailedMatch && !isLoadingDetails) {
+          setIsLoadingDetails(true);
+          try {
+              const res = await getGapAnalysisForJob(match.id);
+              if (res.success) {
+                  setDetailedMatch(res.data);
+              }
+          } catch(e) {
+              console.error("Failed to load match details:", e);
+              toast.error("Failed to load match analysis.");
+          } finally {
+              setIsLoadingDetails(false);
+          }
+      }
     };
 
     // SVG ring for score
@@ -143,7 +170,7 @@ export default function JobCard({ match }) {
                         <h3 className="font-semibold text-lg leading-tight line-clamp-2">{job.title}</h3>
                         <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                             <Building2 className="h-3.5 w-3.5" />
-                            <span>{job.company}</span>
+                            <span>{job.company || "Missing Company"}</span>
                         </div>
                     </div>
 
@@ -157,38 +184,17 @@ export default function JobCard({ match }) {
                             <Briefcase className="h-3 w-3" />
                             {job.experienceLevel}
                         </Badge>
-                        {job.salaryRange && (
+                        {job.salary && (
                             <Badge variant="outline" className="text-xs flex items-center gap-1">
                                 <DollarSign className="h-3 w-3" />
-                                {job.salaryRange}
-                            </Badge>
-                        )}
-                        {job.jobType && (
-                            <Badge variant="outline" className="text-xs capitalize">
-                                {job.jobType}
+                                {job.salary}
                             </Badge>
                         )}
                     </div>
 
-                    {/* Skills */}
-                    {job.skillsRequired && job.skillsRequired.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                            {job.skillsRequired.slice(0, 5).map((skill) => (
-                                <Badge key={skill} variant="secondary" className="text-xs">
-                                    {skill}
-                                </Badge>
-                            ))}
-                            {job.skillsRequired.length > 5 && (
-                                <Badge variant="secondary" className="text-xs">
-                                    +{job.skillsRequired.length - 5}
-                                </Badge>
-                            )}
-                        </div>
-                    )}
-
                     {/* "Why this match?" toggle */}
                     <button
-                        onClick={() => setShowDetails(!showDetails)}
+                        onClick={handleToggleDetails}
                         className="w-full flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
                     >
                         <Sparkles className="h-3.5 w-3.5" />
@@ -205,33 +211,46 @@ export default function JobCard({ match }) {
                                 exit={{ opacity: 0, height: 0 }}
                                 className="space-y-3 overflow-hidden"
                             >
-                                {/* Match Reasoning */}
-                                {match.matchReasoning && (
-                                    <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                                        <p className="text-sm font-medium">
-                                            {match.matchReasoning.summary}
-                                        </p>
-                                        {match.matchReasoning.details?.slice(1).map((detail, i) => (
-                                            <p key={i} className="text-xs text-muted-foreground">
-                                                • {detail}
-                                            </p>
-                                        ))}
+                                {isLoadingDetails ? (
+                                    <div className="flex flex-col items-center justify-center py-6">
+                                        <div className="w-6 h-6 border-b-2 border-primary rounded-full animate-spin mb-2"></div>
+                                        <p className="text-xs text-muted-foreground">Loading analysis...</p>
                                     </div>
-                                )}
+                                ) : detailedMatch ? (
+                                    <>
+                                        {/* Match Reasoning */}
+                                        {detailedMatch.matchReasoning && (
+                                            <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                                                <p className="text-sm font-medium">
+                                                    {detailedMatch.matchReasoning.summary}
+                                                </p>
+                                                {detailedMatch.matchReasoning.details?.slice(1).map((detail, i) => (
+                                                    <p key={i} className="text-xs text-muted-foreground">
+                                                        • {detail}
+                                                    </p>
+                                                ))}
+                                            </div>
+                                        )}
 
-                                {/* Score Breakdown */}
-                                <MatchBreakdown
-                                    skillMatch={match.skillMatchScore}
-                                    levelMatch={match.levelMatchScore}
-                                    location={match.locationScore}
-                                    atsReadiness={match.atsScore}
-                                    industry={match.industryScore}
-                                />
+                                        {/* Score Breakdown */}
+                                        <Suspense fallback={<div className="h-24 bg-muted animate-pulse rounded-md" />}>
+                                          <MatchBreakdown
+                                              skillMatch={detailedMatch.breakdown?.skillMatch}
+                                              levelMatch={detailedMatch.breakdown?.levelMatch}
+                                              location={detailedMatch.breakdown?.location}
+                                              atsReadiness={detailedMatch.breakdown?.atsReadiness}
+                                              industry={detailedMatch.breakdown?.industry}
+                                          />
+                                        </Suspense>
 
-                                {/* Gap Analysis */}
-                                {match.gapAnalysis && (
-                                    <GapAnalysisCard gapAnalysis={match.gapAnalysis} />
-                                )}
+                                        {/* Gap Analysis */}
+                                        {detailedMatch.gapAnalysis && (
+                                           <Suspense fallback={<div className="h-24 bg-muted animate-pulse rounded-md" />}>
+                                              <GapAnalysisCard gapAnalysis={detailedMatch.gapAnalysis} />
+                                           </Suspense>
+                                        )}
+                                    </>
+                                ) : null}
                             </motion.div>
                         )}
                     </AnimatePresence>

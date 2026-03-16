@@ -52,8 +52,22 @@ export async function getMatchedJobs(filters = {}) {
 
     const matches = await db.userJobMatch.findMany({
         where,
-        include: {
-            job: true,
+        select: {
+            id: true,
+            matchScore: true,
+            status: true,
+            job: {
+                select: {
+                    id: true,
+                    title: true,
+                    company: true,
+                    location: true,
+                    salaryRange: true,
+                    experienceLevel: true,
+                    isRemote: true,
+                    postedDate: true,
+                }
+            }
         },
         orderBy: { matchScore: "desc" },
         take: 50,
@@ -202,20 +216,24 @@ export async function refreshJobMatches() {
             return { success: false, message: "No jobs found. Please try again later." };
         }
 
-        // Upsert jobs into database
+        // Upsert jobs into database concurrently
         let insertedCount = 0;
-        for (const job of jobs) {
+        const jobUpsertPromises = jobs.map(async (job) => {
             try {
                 await db.jobListing.upsert({
                     where: { externalJobId: job.externalJobId },
                     update: { isActive: true, updatedAt: new Date() },
                     create: job,
                 });
-                insertedCount++;
+                return 1;
             } catch (error) {
                 console.warn(`Skipping job: ${error.message}`);
+                return 0;
             }
-        }
+        });
+        
+        const upsertResults = await Promise.all(jobUpsertPromises);
+        insertedCount = upsertResults.reduce((a, b) => a + b, 0);
 
         // Get active jobs
         const activeJobs = await db.jobListing.findMany({
@@ -235,41 +253,51 @@ export async function refreshJobMatches() {
         };
 
         let matchesCreated = 0;
-        for (const job of activeJobs) {
-            try {
-                const result = await calculateJobMatch(user, job, userProfile, weights);
+        // Process AI scoring in batches of 5 to avoid API rate limits, but significantly speed up execution from sequential
+        const BATCH_SIZE = 5;
+        for (let i = 0; i < activeJobs.length; i += BATCH_SIZE) {
+            const batch = activeJobs.slice(i, i + BATCH_SIZE);
+            const batchPromises = batch.map(async (job) => {
+                try {
+                    const result = await calculateJobMatch(user, job, userProfile, weights);
 
-                if (result.matchScore >= 60) {
-                    await db.userJobMatch.upsert({
-                        where: { userId_jobId: { userId: user.id, jobId: job.id } },
-                        update: {
-                            matchScore: result.matchScore,
-                            skillMatchScore: result.breakdown.skillMatch,
-                            levelMatchScore: result.breakdown.levelMatch,
-                            locationScore: result.breakdown.location,
-                            atsScore: result.breakdown.atsReadiness,
-                            industryScore: result.breakdown.industryMatch,
-                            matchReasoning: result.reasoning,
-                            gapAnalysis: result.gapAnalysis,
-                        },
-                        create: {
-                            userId: user.id,
-                            jobId: job.id,
-                            matchScore: result.matchScore,
-                            skillMatchScore: result.breakdown.skillMatch,
-                            levelMatchScore: result.breakdown.levelMatch,
-                            locationScore: result.breakdown.location,
-                            atsScore: result.breakdown.atsReadiness,
-                            industryScore: result.breakdown.industryMatch,
-                            matchReasoning: result.reasoning,
-                            gapAnalysis: result.gapAnalysis,
-                        },
-                    });
-                    matchesCreated++;
+                    if (result.matchScore >= 60) {
+                        await db.userJobMatch.upsert({
+                            where: { userId_jobId: { userId: user.id, jobId: job.id } },
+                            update: {
+                                matchScore: result.matchScore,
+                                skillMatchScore: result.breakdown.skillMatch,
+                                levelMatchScore: result.breakdown.levelMatch,
+                                locationScore: result.breakdown.location,
+                                atsScore: result.breakdown.atsReadiness,
+                                industryScore: result.breakdown.industryMatch,
+                                matchReasoning: result.reasoning,
+                                gapAnalysis: result.gapAnalysis,
+                            },
+                            create: {
+                                userId: user.id,
+                                jobId: job.id,
+                                matchScore: result.matchScore,
+                                skillMatchScore: result.breakdown.skillMatch,
+                                levelMatchScore: result.breakdown.levelMatch,
+                                locationScore: result.breakdown.location,
+                                atsScore: result.breakdown.atsReadiness,
+                                industryScore: result.breakdown.industryMatch,
+                                matchReasoning: result.reasoning,
+                                gapAnalysis: result.gapAnalysis,
+                            },
+                        });
+                        return 1;
+                    }
+                    return 0;
+                } catch (error) {
+                    console.warn(`Error matching job ${job.id}:`, error.message);
+                    return 0;
                 }
-            } catch (error) {
-                console.warn(`Error matching job ${job.id}:`, error.message);
-            }
+            });
+            
+            const results = await Promise.all(batchPromises);
+            matchesCreated += results.reduce((a, b) => a + b, 0);
         }
 
         revalidatePath("/jobs");

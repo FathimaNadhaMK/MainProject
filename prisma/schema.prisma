@@ -523,3 +523,14 @@ model Review {
   createdAt DateTime @default(now())
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model CoverLetter {
+  id        String   @id @default(cuid())
+  userId    String
+  company   String
+  position  String
+  content   String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}

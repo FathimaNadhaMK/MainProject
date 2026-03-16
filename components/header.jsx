@@ -9,6 +9,7 @@ import {
   ChevronDown,
   StarsIcon,
   BriefcaseIcon,
+  PenLine 
 } from "lucide-react";
 import Link from "next/link";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
@@ -108,8 +109,17 @@ export default function Header() {
                     Job Matches
                   </Link>
                 </DropdownMenuItem>
+
+               <DropdownMenuItem asChild>
+                  <Link href="/cover-letter" className="flex items-center gap-2">
+                    <PenLine className="h-4 w-4" />
+                    Cover Letter
+                  </Link>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            
           </SignedIn>
 
           <SignedOut>

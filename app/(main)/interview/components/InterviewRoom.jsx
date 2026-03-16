@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
 import {
   generateNextQuestion,
+  generateAnswerFeedback,
   generateInterviewFeedback,
 } from "../lib/interviewer-ai";
 import { fetchInterviewConfig } from "@/actions/interview-session";
@@ -29,12 +30,17 @@ export default function InterviewRoom({ sessionId }) {
   const [microphoneError, setMicrophoneError] = useState(null);
   const [recruiterSpeaking, setRecruiterSpeaking] = useState(false);
   const [mode, setMode] = useState("audio");
+  const [isUserTalking, setIsUserTalking] = useState(false);
+  const [isWaitingForNext, setIsWaitingForNext] = useState(false);
+
+  const timeoutRef = useRef(null);
 
   const {
     transcript,
     listening,
     resetTranscript,
     browserSupportsSpeechRecognition,
+    isMicrophoneAvailable,
   } = useSpeechRecognition();
 
   const MAX_TURNS = 6;
@@ -57,13 +63,61 @@ export default function InterviewRoom({ sessionId }) {
 
   useEffect(() => {
     if (!callStarted) return;
-    setCurrentQuestion("Please introduce yourself and tell me about your background.");
+
+    // First question initialization
+    const initInterview = async () => {
+      setRecruiterSpeaking(true);
+      setCurrentQuestion("Processing resume details...");
+      try {
+        const initialMsg = await generateNextQuestion({
+          sessionId,
+          conversation: [],
+        });
+        setCurrentQuestion(initialMsg.question);
+        speak(initialMsg.question);
+      } catch (err) {
+        setCurrentQuestion("Please introduce yourself and tell me about your background.");
+        speak("Please introduce yourself and tell me about your background.");
+      }
+      setRecruiterSpeaking(false);
+
+      if (browserSupportsSpeechRecognition) {
+        SpeechRecognition.startListening({ continuous: true });
+      }
+    };
+
+    initInterview();
   }, [callStarted]);
 
+  // Duplex VAD and Manual Detection
   useEffect(() => {
-    if (!callStarted) return;
-    setCurrentQuestion("Please introduce yourself and tell me about your background.");
-  }, [callStarted]);
+    if (transcript.trim().length > 5 && recruiterSpeaking) {
+      // VAD Interruption: User started talking, cut off the AI immediately
+      window.speechSynthesis.cancel();
+      setRecruiterSpeaking(false);
+    }
+
+    if (transcript.trim()) {
+      setIsUserTalking(true);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      // Removed 4-second auto-submit. Waiting for manual submit click.
+    } else {
+      setIsUserTalking(false);
+    }
+  }, [transcript]);
+
+  // Watchdog: Force SpeechRecognition to stay alive during the user's turn. 
+  useEffect(() => {
+    if (callStarted && !recruiterSpeaking && !isWaitingForNext && !isMuted) {
+      if (!listening && browserSupportsSpeechRecognition) {
+        try {
+          SpeechRecognition.startListening({ continuous: true, language: 'en-US' });
+        } catch (err) {
+          console.warn("Speech recognition restart ignored", err);
+        }
+      }
+    }
+  }, [listening, callStarted, recruiterSpeaking, isWaitingForNext, isMuted, browserSupportsSpeechRecognition]);
 
   async function startCall() {
     try {
@@ -166,10 +220,17 @@ export default function InterviewRoom({ sessionId }) {
       });
       setIsMuted(!isMuted);
     }
+    if (!isMuted) {
+      SpeechRecognition.stopListening();
+    } else if (browserSupportsSpeechRecognition) {
+      SpeechRecognition.startListening({ continuous: true, language: 'en-US' });
+    }
   }
 
   async function submitAnswer(answer) {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setIsRecording(false);
+    setIsUserTalking(false);
 
     const updatedConversation = [
       ...conversation,
@@ -178,11 +239,43 @@ export default function InterviewRoom({ sessionId }) {
     ];
 
     setConversation(updatedConversation);
+    setRecruiterSpeaking(true);
 
+    // Multimodal Vision capture
+    let imageBase64 = null;
+    if (mode === "video" && videoRef.current) {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = videoRef.current.videoWidth;
+        canvas.height = videoRef.current.videoHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        imageBase64 = canvas.toDataURL("image/jpeg").split(',')[1];
+      } catch (e) { console.error("Could not capture frame", e); }
+    }
+
+    try {
+      const { feedback } = await generateAnswerFeedback({
+        sessionId,
+        conversation: updatedConversation,
+        imageBase64
+      });
+
+      speak(feedback);
+    } catch (err) {
+      console.error(err);
+      speak("Got it! Thanks for sharing.");
+    }
+
+    setRecruiterSpeaking(false);
+    setIsWaitingForNext(true);
+  }
+
+  async function handleNextQuestion() {
     if (turn >= MAX_TURNS) {
       setFinished(true);
       const result = await generateInterviewFeedback({
-        conversation: updatedConversation,
+        conversation,
         sessionId,
       });
       setFeedback(result);
@@ -191,29 +284,40 @@ export default function InterviewRoom({ sessionId }) {
 
     const nextTurn = turn + 1;
     setTurn(nextTurn);
-
-    // Simulate recruiter speaking
     setRecruiterSpeaking(true);
-    await new Promise((r) => setTimeout(r, 2000));
+    setIsWaitingForNext(false);
 
-    const nextQuestionData = await generateNextQuestion({
-      sessionId,
-      conversation: updatedConversation,
-    });
+    try {
+      const nextQuestionData = await generateNextQuestion({
+        sessionId,
+        conversation,
+      });
 
-    setCurrentQuestion(nextQuestionData.question);
+      setCurrentQuestion(nextQuestionData.question);
+      speak(nextQuestionData.question);
+    } catch (err) {
+      console.error(err);
+      setCurrentQuestion("Could you elaborate on that?");
+      speak("Could you elaborate on that?");
+    }
+
     setRecruiterSpeaking(false);
     setIsRecording(true);
-
-    // Auto-speak the question
-    speak(nextQuestionData.question);
+    if (browserSupportsSpeechRecognition && !isMuted) {
+      SpeechRecognition.startListening({ continuous: true, language: 'en-US' });
+    }
   }
 
   function speak(text) {
+    window.speechSynthesis.cancel(); // ensure no overlap
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.95;
     utterance.pitch = 0.9;
     utterance.lang = "en-US";
+
+    utterance.onstart = () => setRecruiterSpeaking(true);
+    utterance.onend = () => setRecruiterSpeaking(false);
+
     window.speechSynthesis.speak(utterance);
   }
 
@@ -404,80 +508,91 @@ export default function InterviewRoom({ sessionId }) {
 
       {/* Controls */}
       <div className="p-6 flex flex-col justify-center items-center gap-4 border-t border-gray-700">
-        <div className="w-full max-w-2xl bg-gray-900 border border-gray-700 rounded-lg p-4 min-h-[80px]">
-          <p className="text-gray-300">
-            {listening && (
-              <span className="text-red-400 font-bold animate-pulse mr-2">
-                ● Recording...
+        <div className={`w-full max-w-2xl bg-gray-900 border transition-all duration-300 rounded-lg p-4 min-h-[80px] ${isUserTalking ? "border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]" : "border-gray-700"
+          }`}>
+          <div className="text-gray-300">
+            {isMicrophoneAvailable === false && (
+              <span className="text-red-400 font-bold mr-2 block mb-2">
+                🚫 OS Microphone access blocked or unavailable!
               </span>
+            )}
+            {listening && !isUserTalking && !recruiterSpeaking && (
+              <span className="text-green-400 font-bold animate-pulse mr-2 block mb-2">
+                ● Auto-Listening to your voice...
+              </span>
+            )}
+            {recruiterSpeaking && (
+              <span className="text-blue-400 font-bold animate-pulse mr-2 block mb-2">
+                AI is speaking...
+              </span>
+            )}
+            {!listening && !recruiterSpeaking && !isWaitingForNext && browserSupportsSpeechRecognition && (
+              <button
+                onClick={() => SpeechRecognition.startListening({ continuous: true, language: 'en-US' })}
+                className="text-yellow-400 font-bold hover:underline mr-2 mb-2 block animate-pulse bg-yellow-900/30 px-3 py-1 rounded"
+              >
+                ⚠️ Browser suspended microphone. Click here to force resume!
+              </button>
             )}
             {transcript || (
-              <span className="text-gray-600 italic">
+              <span className="text-gray-600 italic block">
                 {browserSupportsSpeechRecognition
-                  ? "Your spoken answer will appear here..."
-                  : "Speech recognition is not supported in this browser. You can still type below."}
+                  ? "Speak naturally. Your transcription will appear here..."
+                  : "Speech recognition is not supported in this browser."}
               </span>
             )}
-          </p>
+          </div>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex gap-4 w-full max-w-2xl justify-center">
           <button
             onClick={toggleMute}
-            className={`px-6 py-3 rounded-full font-semibold transition ${isMuted
-              ? "bg-red-600/20 border border-red-600 text-red-400 hover:bg-red-600/30"
-              : "bg-gray-700 hover:bg-gray-600 text-white"
+            className={`flex-1 py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition ${isMuted
+              ? "bg-red-600/20 border border-red-600 text-red-500 hover:bg-red-600/30"
+              : "bg-gray-800 border border-gray-600 hover:bg-gray-700 text-white"
               }`}
           >
-            {isMuted ? "🔇 Unmute" : "🎤 Mute"}
+            {isMuted ? "🔇 Unmuted (Paused)" : "🎤 Mute Microphone"}
           </button>
 
-          {!listening ? (
+          {!isWaitingForNext ? (
             <button
               onClick={() => {
-                if (browserSupportsSpeechRecognition) {
-                  SpeechRecognition.startListening({ continuous: true });
+                const finalAnswer = transcript.trim();
+                if (finalAnswer) {
+                  resetTranscript();
+                  submitAnswer(finalAnswer);
                 } else {
-                  const ans = prompt("Speech recognition unsupported. Type response:");
-                  if (ans) submitAnswer(ans);
+                  alert("No speech detected. Please speak your answer into the microphone.");
                 }
               }}
               disabled={recruiterSpeaking}
-              className="px-8 py-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-full font-semibold transition"
+              className={`flex-1 py-4 text-white rounded-xl font-bold transition flex items-center justify-center gap-2 ${transcript.trim()
+                ? "bg-green-600 hover:bg-green-700 animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+                : "bg-gray-600 hover:bg-gray-700"
+                }`}
             >
-              Start Recording Answer
+              Submit Answer
             </button>
           ) : (
             <button
-              onClick={() => {
-                SpeechRecognition.stopListening();
-                if (transcript.trim()) {
-                  submitAnswer(transcript.trim());
-                  resetTranscript();
-                } else {
-                  console.warn("No speech captured by SpeechRecognition.");
-                  const ans = prompt("No speech captured. You can type your response instead:");
-                  if (ans) {
-                    submitAnswer(ans);
-                  }
-                }
-              }}
+              onClick={handleNextQuestion}
               disabled={recruiterSpeaking}
-              className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-full font-semibold transition animate-pulse"
+              className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(59,130,246,0.4)]"
             >
-              Finish & Submit
+              Next Question
             </button>
           )}
 
           <button
             onClick={endCall}
-            className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-semibold transition"
+            className="flex-1 py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition flex items-center justify-center gap-2"
           >
-            📞 End Call
+            📞 End Interview
           </button>
         </div>
       </div>
-    </div>
+    </div >
   );
 
 }
