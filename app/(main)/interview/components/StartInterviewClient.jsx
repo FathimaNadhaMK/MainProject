@@ -2,14 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createInterviewSession, extractPdfText } from "@/actions/interview-session";
+import { useRouter } from "next/navigation";
+import { createInterviewSession, extractPdfText } from "../_actions/interview-session";
 import { getInterviewContext } from "@/actions/user";
 
 // recruiter data will be generated based on onboarding context
 import { generateRecruiters } from "@/lib/recruiters";
-
-// initially no recruiters until context is fetched
-
 
 export default function StartInterviewClient() {
   const router = useRouter();
@@ -23,8 +21,8 @@ export default function StartInterviewClient() {
   const [loading, setLoading] = useState(false);
   const [context, setContext] = useState(null);
   const [contextLoading, setContextLoading] = useState(true);
-  const [contextError, setContextError] = useState(null);
   const [recruiters, setRecruiters] = useState([]);
+  const [duration, setDuration] = useState(300); // default 5 minutes (in seconds)
 
   /* helpers */
   function handleFile(file) {
@@ -50,7 +48,6 @@ export default function StartInterviewClient() {
 
   async function startInterview() {
     if (!context || !context.user || !context.user.industry) {
-      // ensure onboarding
       router.push("/onboarding");
       return;
     }
@@ -67,12 +64,12 @@ export default function StartInterviewClient() {
         mode,
         recruiterProfile: selectedRecruiter,
         resumeText,
+        duration,
       });
       router.push(`/interview/session/${interviewId}`);
     } catch (err) {
       console.error("startInterview error", err);
       alert(err.message || "Failed to start interview. Please try again.");
-      // if user needs onboarding, send them there
       if (err.message && err.message.toLowerCase().includes("onboarding")) {
         router.push("/onboarding");
       }
@@ -88,7 +85,6 @@ export default function StartInterviewClient() {
       .then((res) => {
         const ctx = res ? { user: { industry: res.targetField } } : null;
         setContext(ctx);
-        // once we know the user's field/role, generate recruiters
         if (res) {
           setRecruiters(
             generateRecruiters({
@@ -100,151 +96,183 @@ export default function StartInterviewClient() {
       })
       .catch((err) => {
         console.error("failed to load interview context", err);
-        setContextError(err);
       })
       .finally(() => setContextLoading(false));
   }, []);
 
   /* render */
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-6">
-      <div className="max-w-3xl w-full space-y-12">
-        {/* header */}
-        <header className="text-center">
-          <h1 className="text-3xl font-semibold text-white">
-            AI Mock Interview
+    <div className="min-h-screen bg-[#050505] text-slate-200 flex items-center justify-center p-6 relative overflow-hidden font-sans">
+      {/* Vibrant Midnight Glows */}
+      <div className="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] bg-indigo-600/20 blur-[130px] rounded-full animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] bg-purple-600/20 blur-[130px] rounded-full animate-pulse" style={{ animationDelay: '2s' }} />
+
+      <div className="max-w-5xl w-full space-y-12 relative z-10 animate-in fade-in zoom-in-95 duration-1000 py-12">
+        {/* Header */}
+        <header className="text-center space-y-6">
+          <h1 className="text-6xl font-black tracking-tighter text-white">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">Career Coach</span> AI
           </h1>
-          <p className="mt-2 text-gray-300">
-            Personalized questions based on your resume, goals and skills.
-            Choose your setup below to begin.
+          <p className="max-w-xl mx-auto text-slate-400 text-lg font-medium leading-relaxed">
+            Prepare for your dream role with personalized, high-fidelity interview practice.
           </p>
         </header>
 
-        {/* resume upload */}
-        <section>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Resume <span className="text-red-400 font-bold">* (Required)</span>
-          </label>
-          <p className="text-xs text-gray-400 mb-3">
-            You must upload your resume in PDF format. This is required to begin the mock interview and configure exactly what the AI will ask you.
-          </p>
-          <div
-            onDrop={onDrop}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragActive(true);
-            }}
-            onDragLeave={() => setDragActive(false)}
-            className={`relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer ${dragActive ? "border-blue-400 bg-blue-800" : "border-gray-700 bg-gray-800"
-              }`}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/pdf"
-              className="hidden"
-              onChange={onFileChange}
-            />
-            {resumeFile ? (
-              <p className="text-gray-200">{resumeFile.name}</p>
-            ) : (
-              <p className="text-gray-400">
-                Drag & drop a PDF or click to browse
-              </p>
-            )}
-          </div>
-        </section>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+          <div className="lg:col-span-12 space-y-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              {/* Resume Upload */}
+              <section className="space-y-6">
+                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-indigo-400 flex items-center gap-3">
+                  <div className="w-8 h-[1px] bg-indigo-500/50" /> 01 Your Resume
+                </h3>
+                <div
+                  onDrop={onDrop}
+                  onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                  onDragLeave={() => setDragActive(false)}
+                  className={`relative group border-2 border-dashed rounded-[3rem] p-10 text-center cursor-pointer transition-all duration-700 bg-white/[0.03] backdrop-blur-3xl overflow-hidden ${dragActive
+                      ? "border-indigo-500 bg-indigo-500/10 scale-[1.02]"
+                      : resumeFile
+                        ? "border-emerald-500/50 bg-emerald-500/5"
+                        : "border-white/10 hover:border-white/20 hover:bg-white/[0.05]"
+                    }`}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input ref={fileInputRef} type="file" accept="application/pdf" className="hidden" onChange={onFileChange} />
+                  <div className="space-y-4">
+                    <div className={`w-16 h-16 mx-auto rounded-2xl flex items-center justify-center transition-all duration-500 ${resumeFile ? "bg-emerald-500 text-white shadow-[0_0_30px_rgba(16,185,129,0.3)]" : "bg-white/5 text-slate-400 group-hover:text-white group-hover:bg-indigo-500"
+                      }`}>
+                      {resumeFile ? '✓' : '+'}
+                    </div>
+                    {resumeFile ? (
+                      <p className="text-emerald-400 font-bold tracking-tight">{resumeFile.name}</p>
+                    ) : (
+                      <div>
+                        <p className="text-white font-bold text-lg">Upload PDF Resume</p>
+                        <p className="text-slate-500 text-xs mt-1">We'll tailor the session to your experience</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
 
-        {/* interview mode */}
-        <section>
-          <h2 className="text-lg font-medium text-gray-200 mb-4">
-            Select Interview Mode
-          </h2>
-          <div className="flex gap-6">
-            {[
-              { key: "audio", label: "Audio Interview", icon: "🎧" },
-              { key: "video", label: "Video Interview", icon: "🎥" },
-            ].map((option) => (
-              <button
-                key={option.key}
-                onClick={() => setMode(option.key)}
-                className={`flex-1 border rounded-lg p-6 flex flex-col items-center gap-2 transition shadow-sm hover:shadow-md focus:outline-none ${mode === option.key
-                  ? "border-blue-500 bg-blue-800"
-                  : "border-gray-700 bg-gray-800"
-                  }`}
-              >
-                <span className="text-2xl">{option.icon}</span>
-                <span className="text-gray-200 font-semibold">
-                  {option.label}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
+              {/* Mode Selection */}
+              <section className="space-y-6">
+                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-indigo-400 flex items-center gap-3">
+                  <div className="w-8 h-[1px] bg-indigo-500/50" /> 02 Practice Mode
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { key: "audio", label: "Voice Only", icon: "🎙️" },
+                    { key: "video", label: "Video Call", icon: "📹" },
+                  ].map((option) => (
+                    <button
+                      key={option.key}
+                      onClick={() => setMode(option.key)}
+                      className={`relative p-8 rounded-3xl flex flex-col items-center gap-4 transition-all duration-500 border-2 ${mode === option.key
+                          ? "border-indigo-500 bg-indigo-500/10 shadow-[0_0_40px_rgba(99,102,241,0.2)] scale-[1.05]"
+                          : "border-white/5 bg-white/[0.03] hover:border-white/20"
+                        }`}
+                    >
+                      <span className="text-3xl">{option.icon}</span>
+                      <p className={`font-black text-sm tracking-widest uppercase ${mode === option.key ? "text-white" : "text-slate-500"}`}>
+                        {option.label}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </section>
 
-        {/* recruiter selection */}
-        <section>
-          <h2 className="text-lg font-medium text-gray-200 mb-4">
-            Choose AI Recruiter
-          </h2>
-          {context && context.user && context.user.industry && (
-            <p className="text-gray-400 mb-2">Field: {context.user.industry}</p>
-          )}
-          {contextLoading ? (
-            <p className="text-gray-400">Loading recruiters...</p>
-          ) : contextError ? (
-            <p className="text-red-400">Failed to load context</p>
-          ) : (
-            (() => {
-              if (recruiters.length === 0) {
-                return (
-                  <p className="text-gray-400">
-                    No recruiters available for your field yet.
-                  </p>
-                );
-              }
-              return (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {recruiters.map((r) => (
+              {/* Session Duration Selection */}
+              <section className="space-y-6">
+                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-indigo-400 flex items-center gap-3">
+                  <div className="w-8 h-[1px] bg-indigo-500/50" /> 03 Session Duration
+                </h3>
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { key: 120, label: "2m", sub: "Quick" },
+                    { key: 300, label: "5m", sub: "Standard" },
+                    { key: 600, label: "10m", sub: "Deep" },
+                  ].map((option) => (
+                    <button
+                      key={option.key}
+                      onClick={() => setDuration(option.key)}
+                      className={`relative p-6 rounded-3xl flex flex-col items-center justify-center gap-2 transition-all duration-500 border-2 ${duration === option.key
+                          ? "border-indigo-500 bg-indigo-500/10 shadow-[0_0_40px_rgba(99,102,241,0.2)] scale-[1.05]"
+                          : "border-white/5 bg-white/[0.03] hover:border-white/20"
+                        }`}
+                    >
+                      <p className={`font-black text-xl tracking-tighter ${duration === option.key ? "text-white" : "text-slate-500"}`}>
+                        {option.label}
+                      </p>
+                      <p className="text-[8px] font-black uppercase tracking-widest text-slate-600">{option.sub}</p>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </div>
+
+            {/* Recruiter Selection */}
+            <section className="space-y-8">
+              <h3 className="text-xs font-black uppercase tracking-[0.3em] text-indigo-400 flex items-center gap-3">
+                <div className="w-8 h-[1px] bg-indigo-500/50" /> 03 Choose Your Mentor
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {contextLoading ? (
+                  [...Array(3)].map((_, i) => (
+                    <div key={i} className="h-24 bg-white/5 rounded-3xl animate-pulse" />
+                  ))
+                ) : (
+                  recruiters.map((r) => (
                     <div
                       key={r.id}
                       onClick={() => setSelectedRecruiter(r)}
-                      className={`cursor-pointer border rounded-lg p-4 flex items-center gap-4 transition shadow-sm hover:shadow-md ${selectedRecruiter?.id === r.id
-                        ? "border-blue-500 bg-blue-800 ring-2 ring-blue-300"
-                        : "border-gray-700 bg-gray-800"
+                      className={`group cursor-pointer relative p-6 rounded-[2rem] transition-all duration-500 border-2 overflow-hidden ${selectedRecruiter?.id === r.id
+                          ? "border-indigo-500 bg-indigo-500/10 shadow-[0_0_50px_rgba(99,102,241,0.1)] scale-[1.02]"
+                          : "border-white/5 bg-white/[0.03] hover:border-white/10 hover:scale-[1.01]"
                         }`}
                     >
-                      <img
-                        src={r.avatar}
-                        alt={r.name}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-200">{r.name}</p>
-                        <p className="text-sm text-gray-400">
-                          {r.role} • {r.companyType}
-                        </p>
-                        <p className="text-xs text-gray-500 italic">
-                          {r.tone}
-                        </p>
+                      <div className="flex items-center gap-5 relative z-10">
+                        <div className="relative">
+                          <img
+                            src={r.avatar}
+                            alt={r.name}
+                            className={`w-14 h-14 rounded-2xl object-cover transition-all duration-700 grayscale ${selectedRecruiter?.id === r.id ? "scale-110 grayscale-0" : "opacity-40 group-hover:grayscale-0 group-hover:opacity-100"
+                              }`}
+                          />
+                          {selectedRecruiter?.id === r.id && (
+                            <div className="absolute -inset-1 rounded-2xl border-2 border-indigo-400 animate-pulse pointer-events-none" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className={`font-black text-sm tracking-tight truncate ${selectedRecruiter?.id === r.id ? "text-white" : "text-slate-500"}`}>
+                            {r.name}
+                          </p>
+                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate mt-1">
+                            {r.role}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              );
-            })()
-          )}
-        </section>
+                  ))
+                )}
+              </div>
+            </section>
+          </div>
+        </div>
 
-        {/* start button */}
-        <div className="flex justify-end">
+        {/* Action Button */}
+        <div className="pt-12 text-center">
           <button
-            disabled={!resumeFile || !mode || !selectedRecruiter || loading}
+            disabled={!mode || !selectedRecruiter || !resumeFile || loading}
             onClick={startInterview}
-            className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="group relative inline-flex items-center gap-6 transition-all duration-500 active:scale-[0.98] disabled:opacity-20"
           >
-            {loading ? "Starting…" : "Start Interview"}
+            <div className="absolute inset-0 bg-indigo-500 rounded-full blur-3xl opacity-0 group-hover:opacity-40 transition-opacity" />
+            <div className={`relative px-12 py-6 rounded-full font-black text-xs uppercase tracking-[0.5em] transition-all duration-500 ${loading ? "bg-slate-800 text-slate-500" : "bg-white text-black hover:bg-indigo-400 hover:text-white"
+              }`}>
+              {loading ? "Preparing your session..." : "Start Practice"}
+            </div>
           </button>
         </div>
       </div>
