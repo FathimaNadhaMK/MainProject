@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useRouter } from "next/navigation";
 import { createInterviewSession, extractPdfText } from "../_actions/interview-session";
 import { getInterviewContext } from "@/actions/user";
 

@@ -48,6 +48,9 @@ export default function JobsPageClient({ matchesData, stats }) {
     const allMatches = matchesData?.all || [];
     const matchStats = stats || {};
 
+    // Check if we're in demo mode (any job source is "mock")
+    const isDemoMode = allMatches.some(m => m.job.source === "mock");
+
     const handleRefresh = () => {
         startRefreshTransition(async () => {
             try {
@@ -158,6 +161,21 @@ export default function JobsPageClient({ matchesData, stats }) {
                     color="text-emerald-500"
                 />
             </motion.div>
+
+            {/* Demo Mode Banner */}
+            {isDemoMode && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 flex items-center gap-3 text-amber-500"
+                >
+                    <Sparkles className="h-5 w-5" />
+                    <p className="text-sm font-medium">
+                        <strong>Demo Mode:</strong> You're seeing realistic mock jobs because your API keys aren't configured yet. 
+                        Connect Adzuna or BrightData to see live listings!
+                    </p>
+                </motion.div>
+            )}
 
             {/* Readiness Boost Banner */}
             {matchStats.averageScore > 0 && matchStats.averageScore < 80 && (

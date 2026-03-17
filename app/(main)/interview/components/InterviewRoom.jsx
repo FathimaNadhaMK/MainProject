@@ -37,6 +37,7 @@ export default function InterviewRoom({ sessionId }) {
   const [mode, setMode] = useState("audio");
   const [callDuration, setCallDuration] = useState(0);
   const [timeLeft, setTimeLeft] = useState(300);
+  const [isWaitingForNext, setIsWaitingForNext] = useState(false);
 
   const {
     transcript,
