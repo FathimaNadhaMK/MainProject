@@ -509,6 +509,13 @@ export default function PhaseView({ roadmap, phase, weekRange, phaseNumber }) {
                                                         <ProjectSubmission
                                                             weekNumber={week.week}
                                                             colorScheme={colorScheme}
+                                                            onEvaluated={() => {
+                                                                setWeekStatus(prev => ({
+                                                                    ...prev,
+                                                                    [week.week]: { ...prev[week.week], projectCompleted: true },
+                                                                    [week.week + 1]: { ...prev[week.week + 1], isUnlocked: prev[week.week]?.quizPassed }
+                                                                }));
+                                                            }}
                                                         />
                                                         <WeeklyQuiz
                                                             weekNumber={week.week}

@@ -19,7 +19,7 @@ import { Progress } from "@/components/ui/progress";
 
 import { motion, AnimatePresence } from "framer-motion";
 
-export function ProjectSubmission({ weekNumber, colorScheme }) {
+export function ProjectSubmission({ weekNumber, colorScheme, onEvaluated }) {
     const [url, setUrl] = useState("");
     const [loading, setLoading] = useState(false);
     const [report, setReport] = useState(null);
@@ -66,6 +66,9 @@ export function ProjectSubmission({ weekNumber, colorScheme }) {
                 setReport(result.report);
                 setIsLocked(true);
                 toast.success("Project evaluation complete. Submission is now locked.");
+                if (onEvaluated) {
+                    onEvaluated();
+                }
             } else {
                 toast.error(result.error || "Failed to evaluate project");
             }

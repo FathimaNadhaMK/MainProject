@@ -108,9 +108,15 @@ export async function generateWeeklyQuiz(weekNumber) {
 Important: Provide APPLICATION-LEVEL scenario-based questions, not simple definitions. The questions should test practical thinking.
 ${difficultySetting}
 Ensure the questions are unique for this attempt ID: ${Date.now()}.
-Return as JSON with structure: { "topic": "${topic}", "questions": [{"question": "text", "options": {"a": "opt", "b": "opt", "c": "opt", "d": "opt"}, "correctAnswer": "a", "explanation": "text"}] }`;
+Return as strict JSON with this EXACT structure, ensuring all properties and string values are enclosed in double quotes: { "topic": "${topic}", "questions": [{"question": "text", "options": {"a": "opt", "b": "opt", "c": "opt", "d": "opt"}, "correctAnswer": "a", "explanation": "text"}] }`;
 
-        const result = await aiService.genAI.getGenerativeModel({ model: "gemini-3-flash-preview" }, { apiVersion: "v1beta" }).generateContent(prompt);
+        const result = await aiService.genAI.getGenerativeModel(
+            { 
+                model: "gemini-3-flash-preview",
+                generationConfig: { responseMimeType: "application/json" }
+            }, 
+            { apiVersion: "v1beta" }
+        ).generateContent(prompt);
         const responseText = await result.response.text();
         return { success: true, quiz: aiService.parseAIResponse(responseText) };
     } catch (error) {

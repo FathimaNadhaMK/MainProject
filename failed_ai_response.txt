@@ -1,0 +1,62 @@
+```json
+{
+  "topic": "Advanced Java & Spring Boot Fundamentals",
+  "questions": [
+    {
+      "question": "You are building a 'NotificationService' class that sends emails. You want Spring Boot to automatically create an instance of this class and provide it to other parts of your application whenever it is needed. Which annotation should you place at the top of the 'NotificationService' class?",
+      "options": {
+        "a": "@Bean",
+        "b": "@Service",
+        "c": "@Autowired",
+        "d": "@Configuration"
+      },
+      "correctAnswer": "b",
+      "explanation": "@Service is a specialization of @Component. By marking a class with @Service, you tell Spring's component scanner to automatically detect this class and register it as a managed bean in the Application Context."
+    },
+    {
+      "question": "A developer is writing a Java program to store a list of unique employee IDs for a small company. They need to ensure that no duplicate IDs are added and that they can quickly check if an ID exists. Which Java Collection should they use?",
+      "options": {
+        "a": "ArrayList",
+        "b": "LinkedList",
+        "c": "HashSet",
+        "d": "HashMap"
+      },
+      "correctAnswer": "c",
+      "explanation": A HashSet is the best choice here because it automatically prevents duplicate elements and provides high-performance (O(1)) lookups to check if an item exists, which fits the 'unique IDs' and 'quick check' requirements."
+    },
+    {
+      "question": "You are creating a REST API endpoint in Spring Boot that allows a user to submit a registration form (containing name, email, and password). Which HTTP method and Spring annotation should you use to receive this data securely in the method body?",
+      "options": {
+        "a": "@GetMapping and @RequestParam",
+        "b": "@PostMapping and @RequestBody",
+        "c": "@PutMapping and @PathVariable",
+        "d": "@DeleteMapping and @RequestBody"
+      },
+      "correctAnswer": "b",
+      "explanation": To create new resources (like a user registration), the POST method is standard. In Spring Boot, @PostMapping maps the URL, and @RequestBody tells Spring to deserialize the incoming JSON from the request body into a Java object."
+    },
+    {
+      "question": "Your Spring Boot application currently runs on the default port 8080. However, your local machine already has another service running on 8080. What is the easiest way to change your Spring Boot application's port to 9090 without changing any Java code?",
+      "options": {
+        "a": "Modify the server.port property in the application.properties file.",
+        "b": "Create a new Controller to handle port requests.",
+        "c": "Change the port settings in the pom.xml file.",
+        "d": "Manually call System.setPort(9090) in the main method."
+      },
+      "correctAnswer": "a",
+      "explanation": Spring Boot is designed for 'Externalized Configuration'. Adding 'server.port=9090' to the application.properties (or application.yml) file is the standard, code-free way to override default server settings."
+    },
+    {
+      "question": "A junior developer is writing a method that reads a user's profile from a database. Sometimes the user might not exist, resulting in a NullPointerException when trying to access the user's name. Which modern Java feature should be used to explicitly handle the possibility of a 'missing' user?",
+      "options": {
+        "a": "Try-Catch block",
+        "b": "Optional<User>",
+        "c": "If-Else null check",
+        "d": "Assert statement"
+      },
+      "correctAnswer": "b",
+      "explanation": Optional is a container object introduced in Java 8 used to represent the presence or absence of a value. It forces the developer to handle the case where a value is missing, which reduces the risk of NullPointerExceptions and makes the code more readable."
+    }
+  ]
+}
+```
