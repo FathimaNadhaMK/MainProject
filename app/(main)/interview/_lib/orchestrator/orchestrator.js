@@ -12,6 +12,7 @@ import {
   adjustForPersona,
 } from "./orchestrator-rules";
 import { questionPrompt, evaluationPrompt, answerFeedbackPrompt } from "./prompts";
+import { withRetry } from "@/lib/ai-retry";
 
 // shared model instance
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -89,7 +90,7 @@ export async function getNextQuestion({ sessionId, conversation = [], imageBase6
     });
   }
 
-  const res = await model.generateContent(parts);
+  const res = await withRetry(() => model.generateContent(parts), { context: "InterviewQuestion" });
   const questionText = (await res.response.text()).trim();
 
   // persist updated state (save conversation if provided, bump turn, etc.)
@@ -134,7 +135,7 @@ export async function getAnswerFeedback({ sessionId, conversation = [], imageBas
     });
   }
 
-  const res = await model.generateContent(parts);
+  const res = await withRetry(() => model.generateContent(parts), { context: "InterviewFeedback" });
   const text = (await res.response.text()).trim();
 
   return { feedback: text };
@@ -147,7 +148,7 @@ export async function evaluateInterview({ sessionId, conversation = [] }) {
   if (!session) throw new Error("Interview session not found");
 
   const prompt = evaluationPrompt({ conversation, session });
-  const res = await model.generateContent(prompt);
+  const res = await withRetry(() => model.generateContent(prompt), { context: "InterviewEval" });
   let text = await res.response.text();
   text = text.replace(/```(?:json)?/g, "").trim();
 

@@ -100,3 +100,18 @@ Return valid JSON with this structure:
 }
 `;
 }
+
+export function answerFeedbackPrompt({ conversation, recruiterProfile }) {
+  return `You are a professional recruiter (${recruiterProfile.name}).
+  
+Conversation so far:
+${conversation.join("\n")}
+
+Provide brief, professional feedback on the candidate's last response. 
+Focus on:
+- Clarity
+- Professionalism
+- Relevance
+Keep it encouraging but honest. 
+**CRITICAL**: Output should be under two sentences. Do NOT ask a follow-up question. Return ONLY the feedback text.`;
+}
