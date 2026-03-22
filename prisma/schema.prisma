@@ -42,6 +42,7 @@ model User {
   matchPreferences      UserMatchPreference?
   projectEvaluations    ProjectEvaluation[]
   review                Review?
+  coverLetters          CoverLetter[]
 
   @@index([clerkUserId])
   @@index([email])

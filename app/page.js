@@ -24,7 +24,7 @@ import { howItWorks } from "@/data/howItWorks";
 import LiveFeedbackForm from "@/components/live-feedback-form";
 import { getLatestReviews } from "@/actions/reviews";
 
-export default async function LandingPage() {
+async function TestimonialsSection() {
   const latestReviews = await getLatestReviews();
 
   // Map our DB reviews to match the UI shape of static testimonials, padded to 3 length
@@ -39,6 +39,53 @@ export default async function LandingPage() {
     })),
     ...testimonial
   ].slice(0, 3);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+      {displayReviews.map((testimonialItem, index) => (
+        <Card key={index} className="bg-background">
+          <CardContent className="pt-6">
+            <div className="flex flex-col space-y-4">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="relative h-12 w-12 flex-shrink-0">
+                  <Image
+                    width={40}
+                    height={40}
+                    src={testimonialItem.image}
+                    alt={testimonialItem.author}
+                    className="rounded-full object-cover border-2 border-primary/20"
+                  />
+                </div>
+                <div>
+                  <p className="font-semibold">{testimonialItem.author}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {testimonialItem.role}
+                  </p>
+                  <p className="text-sm text-primary">
+                    {testimonialItem.company}
+                  </p>
+                </div>
+              </div>
+              <blockquote>
+                <p className="text-muted-foreground italic relative">
+                  <span className="text-3xl text-primary absolute -top-4 -left-2">
+                    &quot;
+                  </span>
+                  {testimonialItem.quote}
+                  <span className="text-3xl text-primary absolute -bottom-4">
+                    &quot;
+                  </span>
+                </p>
+              </blockquote>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+export default function LandingPage() {
   return (
     <>
       <div className="grid-background"></div>
@@ -129,47 +176,9 @@ export default async function LandingPage() {
           <h2 className="text-3xl font-bold text-center mb-12">
             What Our Users Say
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {displayReviews.map((testimonial, index) => (
-              <Card key={index} className="bg-background">
-                <CardContent className="pt-6">
-                  <div className="flex flex-col space-y-4">
-                    <div className="flex items-center space-x-4 mb-4">
-                      <div className="relative h-12 w-12 flex-shrink-0">
-                        <Image
-                          width={40}
-                          height={40}
-                          src={testimonial.image}
-                          alt={testimonial.author}
-                          className="rounded-full object-cover border-2 border-primary/20"
-                        />
-                      </div>
-                      <div>
-                        <p className="font-semibold">{testimonial.author}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {testimonial.role}
-                        </p>
-                        <p className="text-sm text-primary">
-                          {testimonial.company}
-                        </p>
-                      </div>
-                    </div>
-                    <blockquote>
-                      <p className="text-muted-foreground italic relative">
-                        <span className="text-3xl text-primary absolute -top-4 -left-2">
-                          &quot;
-                        </span>
-                        {testimonial.quote}
-                        <span className="text-3xl text-primary absolute -bottom-4">
-                          &quot;
-                        </span>
-                      </p>
-                    </blockquote>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <React.Suspense fallback={<div className="text-center py-10">Loading Reviews...</div>}>
+            <TestimonialsSection />
+          </React.Suspense>
         </div>
       </section>
 

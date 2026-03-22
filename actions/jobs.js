@@ -50,7 +50,7 @@ export async function getMatchedJobs(filters = {}) {
         };
     }
 
-    const matches = await db.userJobMatch.findMany({
+    const rawMatches = await db.userJobMatch.findMany({
         where,
         select: {
             id: true,
@@ -70,8 +70,18 @@ export async function getMatchedJobs(filters = {}) {
             }
         },
         orderBy: { matchScore: "desc" },
-        take: 50,
+        take: 150, // Get more initially to absorb deduplication
     });
+
+    // Deduplicate on semantic levels (Title + Company) just in case DB holds historical duplicates
+    const seenHashes = new Set();
+    const matches = rawMatches.filter((m) => {
+        if (!m.job) return false;
+        const hash = `${m.job.title}_${m.job.company}`.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (seenHashes.has(hash)) return false;
+        seenHashes.add(hash);
+        return true;
+    }).slice(0, 50); // Restore final limit after deduplication
 
     // Group into tiers
     const tiered = {
@@ -209,7 +219,7 @@ export async function refreshJobMatches() {
         }
 
         // Generate search queries and fetch jobs based on target role
-        const queries = generateSearchQueries([user.targetRole]);
+        const queries = await generateSearchQueries([user.targetRole]);
         const jobs = await fetchAllJobs(queries);
 
         if (jobs.length === 0) {

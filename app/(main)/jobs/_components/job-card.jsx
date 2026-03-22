@@ -281,20 +281,38 @@ export default function JobCard({ match }) {
                                 Unsave
                             </Button>
                         )}
-                        <Button
-                            size="sm"
-                            onClick={() => {
-                                if (job.applicationUrl) {
-                                    window.open(job.applicationUrl, "_blank");
-                                }
-                                handleStatusUpdate("applied");
-                            }}
-                            disabled={isPending || status === "applied"}
-                            className="flex-1 flex items-center gap-1"
-                        >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                            {status === "applied" ? "Applied" : "Apply"}
-                        </Button>
+                        {job.applicationUrl ? (
+                            <a
+                                href={job.applicationUrl.startsWith('http') ? job.applicationUrl : `https://${job.applicationUrl}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors h-8 px-3 gap-1 ${
+                                    isPending || status === "applied" 
+                                    ? "opacity-50 pointer-events-none bg-primary text-primary-foreground" 
+                                    : "bg-primary text-primary-foreground shadow hover:bg-primary/90"
+                                }`}
+                                onClick={(e) => {
+                                    // Let native anchor open tab freely, just defer the state transition
+                                    setTimeout(() => handleStatusUpdate("applied"), 50);
+                                }}
+                            >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                {status === "applied" ? "Applied" : "Apply"}
+                            </a>
+                        ) : (
+                            <Button
+                                size="sm"
+                                disabled={isPending || status === "applied"}
+                                className="flex-1 flex items-center gap-1"
+                                onClick={() => {
+                                    toast.info("No direct external link provided for this listing.");
+                                    handleStatusUpdate("applied");
+                                }}
+                            >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                {status === "applied" ? "Applied" : "Apply"}
+                            </Button>
+                        )}
                         {status !== "rejected" && status !== "applied" && (
                             <Button
                                 variant="ghost"
