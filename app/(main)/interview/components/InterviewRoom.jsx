@@ -37,8 +37,9 @@ export default function InterviewRoom({ sessionId }) {
   const [mode, setMode] = useState("audio");
   const [callDuration, setCallDuration] = useState(0);
   const [timeLeft, setTimeLeft] = useState(300);
-  const [isWaitingForNext, setIsWaitingForNext] = useState(false);
-
+  const isProcessingRef = useRef(false);
+  const [isProcessingUI, setIsProcessingUI] = useState(false);
+  const lastInteractionRef = useRef(Date.now());
   const {
     transcript,
     listening,
@@ -71,24 +72,33 @@ export default function InterviewRoom({ sessionId }) {
 
   useEffect(() => {
     // Aggressive Interruption: If user speaks clearly while AI is talking, stop AI.
-    if (callStarted && recruiterSpeaking && audioLevel > 12) {
+    if (callStarted && recruiterSpeaking && audioLevel > 15) {
       window.speechSynthesis.cancel();
       setRecruiterSpeaking(false);
       resetTranscript();
+      // Keep previous question context so user can continue answering
     }
   }, [audioLevel, recruiterSpeaking, callStarted]);
 
   useEffect(() => {
-    if (!callStarted || finished || recruiterSpeaking || !transcript.trim()) return;
-    const now = Date.now();
-    const timer = setTimeout(() => {
-      if (Date.now() - now >= SILENCE_THRESHOLD - 100) {
-        submitAnswer(transcript.trim());
-        resetTranscript();
+    if (!callStarted || finished || recruiterSpeaking || isProcessingRef.current) {
+      lastInteractionRef.current = Date.now();
+      return;
+    }
+    
+    if (audioLevel > 5) {
+      lastInteractionRef.current = Date.now();
+    } else {
+      // If silence > 1.5s and transcript exists, auto-submit
+      if (Date.now() - lastInteractionRef.current >= 1500) {
+        const finalAnswer = transcript.trim();
+        if (finalAnswer.length > 5) {
+          lastInteractionRef.current = Date.now();
+          submitAnswer(finalAnswer);
+        }
       }
-    }, SILENCE_THRESHOLD);
-    return () => clearTimeout(timer);
-  }, [transcript, recruiterSpeaking, callStarted, finished]);
+    }
+  }, [audioLevel, transcript, recruiterSpeaking, callStarted, finished]);
 
   const [recruiterGender, setRecruiterGender] = useState("male");
 
@@ -108,7 +118,7 @@ export default function InterviewRoom({ sessionId }) {
 
   useEffect(() => {
     if (!callStarted) return;
-    const initialQuestion = "Please introduce yourself and tell me about your background.";
+    const initialQuestion = "Hello Fathima, are you ready? Let's start. Please introduce yourself and tell me about your background.";
     setCurrentQuestion(initialQuestion);
     speak(initialQuestion);
   }, [callStarted]);
@@ -186,8 +196,23 @@ export default function InterviewRoom({ sessionId }) {
     }
   }
 
+  function playFillerSound() {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    const fillers = ["Hmm...", "Right...", "Okay...", "Let me think...", "I see."];
+    const filler = fillers[Math.floor(Math.random() * fillers.length)];
+    speakSingleUtterance(filler);
+  }
+
   async function submitAnswer(answer) {
-    if (!answer || answer.length < 3) return;
+    if (!answer || answer.length < 3 || isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    setIsProcessingUI(true);
+    
+    // Immediately clear transcript and show thinking state
+    resetTranscript();
+    setRecruiterSpeaking(true);
+    playFillerSound();
+
     const updatedConversation = [...conversation, `Interviewer: ${currentQuestion}`, `Candidate: ${answer}`];
     setConversation(updatedConversation);
 
@@ -198,33 +223,7 @@ export default function InterviewRoom({ sessionId }) {
       return;
     }
 
-    setRecruiterSpeaking(true);
-
-    try {
-      const { feedback } = await generateAnswerFeedback({
-        sessionId,
-        conversation: updatedConversation,
-        imageBase64: null
-      });
-      speak(feedback);
-    } catch (err) {
-      speak("Got it! Thanks for sharing.");
-    }
-
-    setIsWaitingForNext(true);
-  }
-
-  async function handleNextQuestion() {
-    if (turn >= MAX_TURNS) {
-      setFinished(true);
-      const result = await generateInterviewFeedback({ conversation, sessionId });
-      setFeedback(result);
-      return;
-    }
-
-    setTurn(turn + 1);
-    setIsWaitingForNext(false);
-    setRecruiterSpeaking(true);
+    setTurn(prev => prev + 1);
     setCurrentQuestion(""); // Reset for new stream
 
     try {
@@ -233,7 +232,7 @@ export default function InterviewRoom({ sessionId }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
-          conversation,
+          conversation: updatedConversation,
           timeRemaining: timeLeft
         })
       });
@@ -248,22 +247,20 @@ export default function InterviewRoom({ sessionId }) {
       // Function to process and speak sentences as they come
       const processSentences = (text, isFinal = false) => {
         sentenceBuffer += text;
-        // Split by sentence terminators but keep them
-        const parts = sentenceBuffer.split(/([.?!])\s+/);
+        const parts = sentenceBuffer.split(/([.?!,])\s*/);
 
         while (parts.length > 2 || (isFinal && parts.length > 0)) {
           let sentence = parts.shift();
-          if (parts.length > 0 && parts[0].match(/[.?!]/)) {
+          if (parts.length > 0 && parts[0].match(/[.?!,]/)) {
             sentence += parts.shift();
           }
           if (sentence.trim()) {
             speakSentence(sentence.trim());
           }
         }
-        sentenceBuffer = parts.join(" ");
+        sentenceBuffer = parts.join("");
       };
 
-      // Helper for prioritized speech queuing
       const speechQueue = [];
       let isActuallySpeaking = false;
 
@@ -275,12 +272,13 @@ export default function InterviewRoom({ sessionId }) {
       const processSpeechQueue = async () => {
         if (speechQueue.length === 0) {
           isActuallySpeaking = false;
+          isProcessingRef.current = false; // Allow next loop
+          setIsProcessingUI(false);
+          setRecruiterSpeaking(false);
           return;
         }
         isActuallySpeaking = true;
         const text = speechQueue.shift();
-
-        // Use a modified 'speak' that doesn't cancel and handles completion callback
         await speakSingleUtterance(text);
         processSpeechQueue();
       };
@@ -288,17 +286,23 @@ export default function InterviewRoom({ sessionId }) {
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
-          processSentences("", true); // Flush remaining buffer
+          processSentences("", true);
+          if (speechQueue.length === 0 && !isActuallySpeaking) {
+            isProcessingRef.current = false;
+            setIsProcessingUI(false);
+            setRecruiterSpeaking(false);
+          }
           break;
         }
         const chunk = decoder.decode(value, { stream: true });
         fullContent += chunk;
-        setCurrentQuestion(fullContent); // Live UI update
+        setCurrentQuestion(fullContent);
         processSentences(chunk);
       }
     } catch (err) {
       console.error("Streaming error:", err);
-      // Fallback or error UI
+      isProcessingRef.current = false;
+      setIsProcessingUI(false);
     }
   }
 
@@ -307,30 +311,37 @@ export default function InterviewRoom({ sessionId }) {
     return new Promise((resolve) => {
       const utterance = new SpeechSynthesisUtterance(text);
       const voices = window.speechSynthesis.getVoices();
+      const simpleName = recruiterName?.split('(')[0].trim() || "Coach";
 
-      let preferredVoice = voices.find(v => {
+      let matchingVoices = voices.filter(v => {
+        if (!v.lang.startsWith('en')) return false;
         const name = v.name.toLowerCase();
-        const isNatural = name.includes('google') || name.includes('natural') || name.includes('premium');
-        const isIndian = v.lang === 'en-IN' || name.includes('india');
-        const matchesGender = recruiterGender === 'female'
-          ? (name.includes('female') || name.includes('priya') || name.includes('heera') || name.includes('veena') || name.includes('zira'))
-          : (name.includes('male') || name.includes('ravi') || name.includes('prabhat') || name.includes('david'));
-        return isNatural && isIndian && matchesGender;
+        const isFemale = name.includes('female') || name.match(/zira|priya|samantha|jenny|hazel|heera|veena|aria|natasha/);
+        const isMale = name.includes('male') || name.match(/david|ravi|mark|guy|george|brian|prabhat/);
+        if (recruiterGender === 'female') return isFemale;
+        return isMale || (!isFemale && !name.includes('female'));
       });
 
-      if (!preferredVoice) {
-        preferredVoice = voices.find(v => {
-          const name = v.name.toLowerCase();
-          const matchesGender = recruiterGender === 'female' ? (name.includes('female') || name.includes('zira')) : (name.includes('male') || name.includes('david'));
-          return matchesGender && v.lang.startsWith('en');
-        });
+      if (matchingVoices.length === 0) {
+        const enVoices = voices.filter(v => v.lang.startsWith('en'));
+        const half = Math.max(1, Math.floor(enVoices.length / 2));
+        matchingVoices = recruiterGender === 'female' ? enVoices.slice(0, half) : enVoices.slice(half);
+        if (matchingVoices.length === 0) matchingVoices = enVoices;
       }
 
-      if (preferredVoice) utterance.voice = preferredVoice;
-      utterance.rate = 0.94 + (Math.random() * 0.04);
-      utterance.pitch = (recruiterGender === 'female' ? 1.05 : 0.9) + (Math.random() * 0.04);
+      const nameHash = simpleName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      if (matchingVoices.length > 0) utterance.voice = matchingVoices[nameHash % matchingVoices.length];
+
+      const pitchVar = (nameHash % 5) * 0.04;
+      const rateVar = ((nameHash * 2) % 5) * 0.02;
+
+      utterance.pitch = (recruiterGender === 'female' ? 1.0 : 0.9) + pitchVar + (Math.random() * 0.04);
+      utterance.rate = 0.92 + rateVar + (Math.random() * 0.04);
 
       utterance.onstart = () => setRecruiterSpeaking(true);
+      utterance.onerror = () => {
+        setTimeout(resolve, 200);
+      };
       utterance.onend = () => {
         setTimeout(resolve, 200); // BREATH
       };
@@ -362,35 +373,40 @@ export default function InterviewRoom({ sessionId }) {
 
       const utterance = new SpeechSynthesisUtterance(sentence);
       const voices = window.speechSynthesis.getVoices();
+      const simpleName = recruiterName?.split('(')[0].trim() || "Coach";
 
-      let preferredVoice = voices.find(v => {
+      let matchingVoices = voices.filter(v => {
+        if (!v.lang.startsWith('en')) return false;
         const name = v.name.toLowerCase();
-        const isNatural = name.includes('google') || name.includes('natural') || name.includes('premium');
-        const isIndian = v.lang === 'en-IN' || name.includes('india');
-        const matchesGender = recruiterGender === 'female'
-          ? (name.includes('female') || name.includes('priya') || name.includes('heera') || name.includes('veena') || name.includes('zira'))
-          : (name.includes('male') || name.includes('ravi') || name.includes('prabhat') || name.includes('david'));
-        return isNatural && isIndian && matchesGender;
+        const isFemale = name.includes('female') || name.match(/zira|priya|samantha|jenny|hazel|heera|veena|aria|natasha/);
+        const isMale = name.includes('male') || name.match(/david|ravi|mark|guy|george|brian|prabhat/);
+        if (recruiterGender === 'female') return isFemale;
+        return isMale || (!isFemale && !name.includes('female'));
       });
 
-      if (!preferredVoice) {
-        preferredVoice = voices.find(v => {
-          const name = v.name.toLowerCase();
-          const matchesGender = recruiterGender === 'female' ? (name.includes('female') || name.includes('zira')) : (name.includes('male') || name.includes('david'));
-          return matchesGender && v.lang.startsWith('en');
-        });
+      if (matchingVoices.length === 0) {
+        const enVoices = voices.filter(v => v.lang.startsWith('en'));
+        const half = Math.max(1, Math.floor(enVoices.length / 2));
+        matchingVoices = recruiterGender === 'female' ? enVoices.slice(0, half) : enVoices.slice(half);
+        if (matchingVoices.length === 0) matchingVoices = enVoices;
       }
 
-      if (preferredVoice) utterance.voice = preferredVoice;
+      const nameHash = simpleName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      if (matchingVoices.length > 0) utterance.voice = matchingVoices[nameHash % matchingVoices.length];
 
-      // Humanized variability: slight changes in rate/pitch per sentence
-      utterance.rate = 0.94 + (Math.random() * 0.04);
-      utterance.pitch = (recruiterGender === 'female' ? 1.05 : 0.9) + (Math.random() * 0.04);
+      const pitchVar = (nameHash % 5) * 0.04;
+      const rateVar = ((nameHash * 2) % 5) * 0.02;
+
+      utterance.pitch = (recruiterGender === 'female' ? 1.0 : 0.9) + pitchVar + (Math.random() * 0.04);
+      utterance.rate = 0.92 + rateVar + (Math.random() * 0.04);
 
       utterance.onstart = () => setRecruiterSpeaking(true);
+      utterance.onerror = () => {
+        index++;
+        setTimeout(speakNext, 200 + Math.random() * 100);
+      };
       utterance.onend = () => {
         index++;
-        // Breath pause
         setTimeout(speakNext, 200 + Math.random() * 100);
       };
 
@@ -518,185 +534,143 @@ export default function InterviewRoom({ sessionId }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-slate-300 flex flex-col font-sans relative overflow-hidden">
-      {/* Background Glows */}
-      <div className="absolute top-0 left-0 w-full h-full z-0 opacity-20 pointer-events-none" style={{ backgroundImage: `radial-gradient(circle at 50% 50%, #4f46e5 0%, transparent 50%)`, backgroundSize: '100% 100%' }} />
+    <div className="min-h-screen bg-[#09090b] text-slate-300 flex flex-col font-sans relative overflow-hidden">
+      {/* Background Ambient Glows */}
+      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full transition-all duration-1000 blur-[130px] pointer-events-none opacity-30 ${recruiterSpeaking ? 'bg-indigo-600/30 scale-125' : 'bg-indigo-900/10 scale-100'}`} />
 
-      {/* Header HUD */}
-      <div className="flex justify-between items-center px-10 py-8 bg-black/40 backdrop-blur-3xl sticky top-0 z-50 border-b border-white/5">
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
-              <div className="absolute inset-0 w-2 h-2 bg-indigo-500 rounded-full animate-ping opacity-50" />
-            </div>
-            <div className="flex items-center gap-2">
-              <p className="text-[10px] font-black tracking-[0.5em] uppercase text-white">Constant Stream</p>
-              <span className="text-indigo-500 animate-pulse font-bold text-xs">⚡</span>
-            </div>
+      {/* Header Bar */}
+      <div className="flex justify-between items-center px-8 py-6 z-50">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+            <span className="text-indigo-400 text-sm font-bold">AI</span>
           </div>
-          <div className="h-4 w-[1px] bg-white/10" />
-          <div className="flex items-center gap-3">
-            <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${timeLeft < 60 ? "text-rose-400" : "text-indigo-400"}`}>
-              {timeLeft < 60 ? "SESSION ENDS IN" : "LIVE SESSION"}
-            </p>
-            <div className={`bg-white/5 px-3 py-1 rounded-full text-[10px] font-mono transition-colors ${timeLeft < 60 ? "text-rose-500 animate-pulse font-bold" : "text-slate-400"}`}>
-              {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
-            </div>
+          <div>
+            <h1 className="text-white font-bold text-sm tracking-wide">{recruiterName || "Interviewer"}</h1>
+            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">{mode === "video" ? "Video Practice Session" : "Voice Practice Session"}</p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex gap-1 items-end h-3">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="w-1 bg-indigo-500/40 rounded-full animate-bounce" style={{ height: `${Math.random() * 100}%`, animationDuration: `${0.5 + Math.random()}s` }} />
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-full border ${timeLeft < 60 ? "border-rose-500/30 bg-rose-500/10 text-rose-400" : "border-white/10 bg-white/5 text-slate-300"}`}>
+          <div className={`w-2 h-2 rounded-full ${timeLeft < 60 ? "bg-rose-500 animate-pulse" : "bg-indigo-400"}`} />
+          <span className="text-xs font-mono font-medium">
+            {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
+          </span>
+        </div>
+      </div>
+
+      {/* Main Stage (Center Space) */}
+      <div className="flex-1 flex flex-col items-center justify-center p-8 w-full max-w-5xl mx-auto space-y-12 relative z-10">
+        
+        {/* Avatar Area */}
+        <div className="relative flex items-center justify-center mb-8">
+          {/* Audio Waves around avatar */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            {[...Array(3)].map((_, i) => (
+              <div 
+                key={`wave-${i}`} 
+                className={`absolute w-[220px] h-[220px] rounded-full border border-indigo-500/20 transition-all duration-150`}
+                style={{ 
+                  transform: `scale(${1 + (audioLevel / 40) + (i * 0.15)})`,
+                  opacity: recruiterSpeaking ? 1 - (i * 0.25) : 0,
+                }} 
+              />
             ))}
           </div>
-          <div className="text-[10px] font-black text-slate-500 tracking-[0.3em] uppercase">{new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' })}</div>
-        </div>
-      </div>
-
-      <div className="flex-1 flex flex-col items-center justify-center p-8 max-w-6xl mx-auto w-full space-y-12 pb-64 relative z-10">
-        <div className="w-full animate-in fade-in slide-in-from-bottom-5 duration-700">
-          {/* Main Interaction Card */}
-          <div className={`relative bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-[3rem] p-12 transition-all duration-700 ${recruiterSpeaking ? "shadow-[0_0_100px_rgba(99,102,241,0.15)] border-indigo-500/40" : ""}`}>
-            <div className="flex flex-col md:flex-row items-center gap-12 mb-12">
-              <div className="relative">
-                {/* Breathing Avatar */}
-                <div
-                  className={`w-44 h-44 rounded-3xl border-2 transition-all duration-500 overflow-hidden shadow-2xl grayscale ${recruiterSpeaking ? "border-indigo-400 scale-[1.05] grayscale-0" : "border-white/10 opacity-70"}`}
-                  style={{ transform: recruiterSpeaking ? `scale(${1 + audioLevel / 1000})` : 'scale(1)' }}
-                >
-                  <img src={recruiters.find(r => r.name === recruiterName)?.avatar || "/recruiters/default.jpg"} alt={recruiterName} className="w-full h-full object-cover" />
-                  <div className={`absolute inset-0 bg-indigo-500/5 transition-opacity duration-1000 ${recruiterSpeaking ? 'opacity-100' : 'opacity-20'}`} />
-                </div>
-                {/* Pulsing Aura */}
-                <div className={`absolute -inset-6 border border-indigo-500/10 rounded-[3rem] animate-pulse pointer-events-none transition-opacity ${recruiterSpeaking ? 'opacity-100' : 'opacity-30'}`} />
-              </div>
-              <div className="text-center md:text-left space-y-4 flex-1">
-                <div className="flex items-center justify-center md:justify-start gap-4">
-                  <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.5em]">Mentor Presence</p>
-                  <div className="h-1 flex-1 max-w-[100px] bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full bg-indigo-500/40 w-full animate-shimmer" />
-                  </div>
-                </div>
-                <h2 className="text-5xl font-black tracking-tighter text-white">{recruiterName || "COACH"}</h2>
-                {/* Responsive Voice Matrix */}
-                <div className="flex items-center justify-center md:justify-start gap-1.5 h-8">
-                  {[...Array(32)].map((_, i) => (
-                    <div
-                      key={i}
-                      className={`w-1 rounded-full transition-all duration-75 ${recruiterSpeaking && i < (audioLevel / 3) ? 'bg-gradient-to-t from-indigo-500 to-purple-400' : 'bg-white/10'}`}
-                      style={{ height: recruiterSpeaking && i < (audioLevel / 3) ? `${Math.max(6, Math.random() * 32)}px` : '4px' }}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Transcription Display */}
-            <div className="relative group">
-              <div className="bg-black/40 rounded-3xl p-10 border border-white/5 min-h-[160px] flex flex-col justify-center transition-all group-hover:border-white/10">
-                <div className="absolute top-4 left-8 flex items-center gap-3">
-                  <p className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.4em]">Continuous Feed</p>
-                  {recruiterSpeaking && <div className="w-1 h-1 bg-indigo-400 rounded-full animate-ping" />}
-                </div>
-                <p className={`text-3xl md:text-4xl leading-tight font-black tracking-tight ${recruiterSpeaking ? 'text-white' : 'text-slate-600'} transition-all duration-500`}>
-                  {currentQuestion || "Initializing stream..."}
-                </p>
-              </div>
-            </div>
+          
+          <div className={`relative z-10 w-56 h-56 rounded-full border-[3px] overflow-hidden transition-all duration-500 shadow-2xl ${recruiterSpeaking ? "border-indigo-400 shadow-indigo-500/20" : "border-white/10"}`}>
+            {mode === "video" ? (
+              <video 
+                ref={(el) => { 
+                  videoRef.current = el; 
+                  if (el && streamRef.current && !el.srcObject) { 
+                    el.srcObject = streamRef.current; 
+                    el.onloadedmetadata = () => el.play(); 
+                  } 
+                }} 
+                muted playsInline autoPlay 
+                className="w-full h-full object-cover scale-x-[-1]" 
+              />
+            ) : (
+              <img 
+                src={recruiters.find(r => r.name === recruiterName)?.avatar || "/recruiters/default.jpg"} 
+                alt={recruiterName || "AI Coach"} 
+                className="w-full h-full object-cover" 
+                onError={(e) => { e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent((recruiterName || "AI").split('(')[0].trim()) + "&background=4f46e5&color=fff&size=200"; }}
+              />
+            )}
+            <div className={`absolute inset-0 bg-indigo-500 transition-opacity duration-300 ${recruiterSpeaking ? 'opacity-20 mix-blend-overlay' : 'opacity-0'}`} />
+          </div>
+          
+          {/* Speaking Indicator Badge */}
+          <div className={`absolute -bottom-4 bg-indigo-600 text-white text-[9px] font-black tracking-widest uppercase px-4 py-1.5 rounded-full shadow-lg border border-indigo-400 transition-all duration-300 ${recruiterSpeaking ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0 scale-90'}`}>
+            Speaking
           </div>
         </div>
 
-        {/* HUD Secondary Grid */}
-        <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-10">
-          {mode === "video" ? (
-            <div className="md:col-span-3 aspect-video bg-black/40 rounded-[2.5rem] overflow-hidden border border-white/10 relative group">
-              <video ref={(el) => { videoRef.current = el; if (el && streamRef.current && !el.srcObject) { el.srcObject = streamRef.current; el.onloadedmetadata = () => el.play(); } }} muted playsInline autoPlay className="w-full h-full object-cover scale-x-[-1] opacity-60 group-hover:opacity-100 transition-opacity duration-1000" />
-              <div className="absolute top-6 left-6 flex items-center gap-3 bg-black/80 backdrop-blur-md px-4 py-2 rounded-xl text-[9px] font-black text-slate-300 uppercase tracking-widest border border-white/10 shadow-2xl">
-                <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse" />
-                Optical Signal
-              </div>
-            </div>
-          ) : (
-            <div className="md:col-span-3 bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-10 flex items-center justify-center relative overflow-hidden group">
-              <div className="absolute inset-0 opacity-10 flex items-end">
-                {[...Array(50)].map((_, i) => (
-                  <div key={i} className="flex-1 bg-indigo-500 animate-pulse" style={{ height: `${20 + Math.random() * 60}%`, animationDelay: `${i * 0.1}s` }} />
-                ))}
-              </div>
-              <div className="relative text-center space-y-4">
-                <span className="text-6xl opacity-40 group-hover:scale-110 transition-transform block">🎙️</span>
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.5em]">Audio Stream Active</p>
-              </div>
-            </div>
-          )}
-          <div className="md:col-span-1 bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-10 flex flex-col justify-center items-center gap-8 group">
-            <div className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all duration-300 ${audioLevel > 15 ? 'border-indigo-500 shadow-[0_0_30px_rgba(99,102,241,0.3)] scale-110' : 'border-white/5'}`}>
-              <span className="text-2xl">{audioLevel > 15 ? "🔥" : "💤"}</span>
-            </div>
-            <div className="w-full space-y-4 px-4 text-center">
-              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Input Saturation</p>
-              <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500" style={{ width: `${Math.min(100, audioLevel * 2)}%` }} />
-              </div>
-            </div>
+        {/* Live Transcription Area (Replaces massive boxes) */}
+        <div className="w-full flex flex-col items-center text-center space-y-8 max-w-3xl">
+          {/* AI Subtitle */}
+          <div className="min-h-[100px] flex items-center justify-center">
+             <p className={`text-2xl md:text-3xl lg:text-4xl font-semibold tracking-tight leading-relaxed transition-all duration-500 ${recruiterSpeaking ? 'text-white drop-shadow-md' : 'text-slate-500'}`}>
+               {currentQuestion || (recruiterSpeaking ? "..." : "")}
+             </p>
           </div>
-        </div>
-      </div>
-
-      {/* Persistence Console */}
-      <div className="fixed bottom-0 left-0 w-full p-10 z-[60] bg-gradient-to-t from-black via-black/90 to-transparent">
-        <div className="max-w-4xl mx-auto space-y-8">
-          {/* Constant Stream Panel */}
-          <div className="bg-white/[0.02] backdrop-blur-3xl border border-white/5 rounded-3xl p-8 transition-all hover:bg-white/[0.04] shadow-2xl">
-            <div className="flex items-center gap-4 mb-4">
-              <p className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.5em]">Constant Stream | Active Listening</p>
-              <div className="flex-1 h-[1px] bg-white/10" />
-              <div className="flex gap-1">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="w-1 h-3 bg-indigo-500 rounded-full animate-pulse" style={{ animationDelay: `${i * 0.2}s` }} />
-                ))}
-              </div>
-            </div>
-            <p className={`text-2xl font-black tracking-tight leading-tight transition-all duration-300 ${listening ? 'text-white' : 'text-slate-600'}`}>
-              {transcript || (recruiterSpeaking ? "Mentor is speaking... I'm listening to your potential interruptions." : "Speak whenever you're ready, I'm streaming your audio now.")}
+          
+          {/* User Subtitle (Fades in immediately when you start speaking) */}
+          <div className={`min-h-[50px] max-w-xl w-full px-8 py-4 rounded-2xl transition-all duration-300 ${transcript ? 'bg-white/5 border border-white/10 opacity-100 shadow-[0_10px_30px_rgba(0,0,0,0.3)]' : 'opacity-0 translate-y-2'}`}>
+            <p className="text-sm md:text-base font-medium text-slate-300 opacity-90">
+              <span className="text-indigo-400 font-bold mr-2">You:</span>
+              {transcript || "..."}
             </p>
           </div>
-          <div className="flex items-center justify-center gap-4">
-            <button onClick={toggleMute} className={`group flex flex-col items-center gap-2 px-8 py-6 transition-all duration-500 rounded-3xl border ${isMuted ? "bg-rose-500/10 border-rose-500/40 text-rose-500 shadow-[0_0_30px_rgba(244,63,94,0.1)]" : "bg-white/5 border-white/10 text-slate-400 hover:border-indigo-500/40 hover:text-white"}`}>
-              <span className="text-xl">{isMuted ? "🎤" : "🔇"}</span><p className="text-[9px] font-black tracking-[0.3em] uppercase">{isMuted ? "LIVE" : "MUTE"}</p>
-            </button>
-            {!isWaitingForNext ? (
-              <button onClick={() => {
-                const finalAnswer = transcript.trim();
-                if (finalAnswer) {
-                  resetTranscript();
-                  submitAnswer(finalAnswer);
-                } else {
-                  alert("No speech detected. Please speak your answer into the microphone.");
-                }
-              }} disabled={recruiterSpeaking} className={`flex-1 ${transcript.trim() ? "bg-emerald-600 hover:bg-emerald-500 text-white" : "bg-white/10 text-slate-400 cursor-not-allowed"} px-10 py-6 font-black text-xs uppercase tracking-[0.5em] rounded-full transition-all`}>
-                Submit Answer
-              </button>
-            ) : (
-              <button onClick={handleNextQuestion} disabled={recruiterSpeaking} className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white px-10 py-6 font-black text-xs uppercase tracking-[0.5em] rounded-full transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)]">
-                Next Question
-              </button>
-            )}
-            <button onClick={endCall} className="bg-rose-600 hover:bg-rose-500 text-white px-8 py-6 font-black text-xs uppercase tracking-[0.5em] rounded-full transition-all shadow-2xl shadow-rose-900/40">End</button>
-          </div>
         </div>
       </div>
-      <style jsx global>{`
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(200%); }
-        }
-        .animate-shimmer {
-          animation: shimmer 2s infinite linear;
-        }
-      `}</style>
+
+      {/* Floating Bottom Dock (Replaces the clunky footer grid) */}
+      <div className="pb-10 pt-6 px-6 flex justify-center z-50">
+        <div className="bg-[#111115]/80 backdrop-blur-2xl border border-white/10 p-2.5 rounded-full flex items-center gap-3 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)]">
+          
+          <button 
+            onClick={toggleMute} 
+            className={`flex items-center justify-center w-14 h-14 rounded-full transition-all duration-300 ${isMuted ? 'bg-rose-500/20 text-rose-400 hover:bg-rose-500/30' : 'bg-white/10 text-white hover:bg-white/20'}`}
+            title="Toggle Microphone"
+          >
+            <span className="text-xl">{isMuted ? "🔇" : "🎤"}</span>
+          </button>
+
+          <div className="px-8 py-2 flex flex-col items-center justify-center min-w-[220px]">
+            {isProcessingUI ? (
+              <div className="flex items-center gap-3">
+                 <div className="w-4 h-4 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+                 <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Processing...</span>
+              </div>
+            ) : recruiterSpeaking ? (
+              <div className="flex items-center gap-1.5 h-[24px]">
+                {[...Array(5)].map((_, i) => (
+                  <div key={`ai-viz-${i}`} className="w-1.5 bg-indigo-500 rounded-full animate-pulse" style={{ height: `${Math.max(6, Math.random() * 24)}px`, animationDuration: `${0.3 + Math.random() * 0.2}s` }} />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center space-y-2 w-full">
+                <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full bg-emerald-400 ${audioLevel > 5 ? 'animate-pulse' : ''}`} /> 
+                  Listening
+                </span>
+                <div className="w-full max-w-[140px] bg-white/10 rounded-full h-1 overflow-hidden">
+                  <div className="h-full bg-emerald-500 transition-all duration-75" style={{ width: `${Math.min(100, audioLevel * 3)}%` }} />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button 
+            onClick={endCall} 
+            className="flex items-center justify-center w-14 h-14 rounded-full bg-rose-600 hover:bg-rose-500 text-white transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(225,29,72,0.4)]"
+            title="End Session"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="22" x2="2" y1="2" y2="22"/></svg>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

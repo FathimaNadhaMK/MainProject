@@ -77,6 +77,50 @@ export default function StartInterviewClient() {
     }
   }
 
+  function handleMentorClick(r) {
+    setSelectedRecruiter(r);
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const simpleName = r.name.split('(')[0].trim();
+      const text = `Hi, I'm ${simpleName}. I'll be your interviewer today.`;
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      const voices = window.speechSynthesis.getVoices();
+      const recruiterGender = r.gender || (simpleName.toLowerCase().match(/anjali|priya|sarah|elena|sneha/i) ? 'female' : 'male');
+      
+      let matchingVoices = voices.filter(v => {
+        if (!v.lang.startsWith('en')) return false;
+        const name = v.name.toLowerCase();
+        const isFemale = name.includes('female') || name.match(/zira|priya|samantha|jenny|hazel|heera|veena|aria|natasha/);
+        const isMale = name.includes('male') || name.match(/david|ravi|mark|guy|george|brian|prabhat/);
+        
+        if (recruiterGender === 'female') return isFemale;
+        return isMale || (!isFemale && !name.includes('female'));
+      });
+
+      if (matchingVoices.length === 0) {
+        const enVoices = voices.filter(v => v.lang.startsWith('en'));
+        const half = Math.max(1, Math.floor(enVoices.length / 2));
+        matchingVoices = recruiterGender === 'female' ? enVoices.slice(0, half) : enVoices.slice(half);
+        if (matchingVoices.length === 0) matchingVoices = enVoices;
+      }
+
+      const nameHash = simpleName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      
+      if (matchingVoices.length > 0) {
+        utterance.voice = matchingVoices[nameHash % matchingVoices.length];
+      }
+      
+      const pitchVar = (nameHash % 5) * 0.04; 
+      const rateVar = ((nameHash * 2) % 5) * 0.02; 
+      
+      utterance.pitch = (recruiterGender === 'female' ? 1.0 : 0.9) + pitchVar;
+      utterance.rate = 0.92 + rateVar;
+      
+      window.speechSynthesis.speak(utterance);
+    }
+  }
+
   /* fetch context once on mount */
   useEffect(() => {
     setContextLoading(true);
@@ -225,10 +269,10 @@ export default function StartInterviewClient() {
                   recruiters.map((r) => (
                     <div
                       key={r.id}
-                      onClick={() => setSelectedRecruiter(r)}
+                      onClick={() => handleMentorClick(r)}
                       className={`group cursor-pointer relative p-6 rounded-[2rem] transition-all duration-500 border-2 overflow-hidden ${selectedRecruiter?.id === r.id
-                          ? "border-indigo-500 bg-indigo-500/10 shadow-[0_0_50px_rgba(99,102,241,0.1)] scale-[1.02]"
-                          : "border-white/5 bg-white/[0.03] hover:border-white/10 hover:scale-[1.01]"
+                          ? "border-indigo-500 bg-indigo-500/10 shadow-[0_0_50px_rgba(99,102,241,0.2)] scale-[1.05]"
+                          : "border-white/5 bg-white/[0.03] hover:border-indigo-400/50 hover:bg-white/[0.06] hover:scale-[1.05] hover:shadow-[0_0_40px_rgba(99,102,241,0.2)]"
                         }`}
                     >
                       <div className="flex items-center gap-5 relative z-10">
@@ -236,7 +280,8 @@ export default function StartInterviewClient() {
                           <img
                             src={r.avatar}
                             alt={r.name}
-                            className={`w-14 h-14 rounded-2xl object-cover transition-all duration-700 grayscale ${selectedRecruiter?.id === r.id ? "scale-110 grayscale-0" : "opacity-40 group-hover:grayscale-0 group-hover:opacity-100"
+                            onError={(e) => { e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(r.name.split('(')[0].trim()) + "&background=4f46e5&color=fff&size=150"; }}
+                            className={`w-14 h-14 rounded-2xl object-cover transition-all duration-700 grayscale ${selectedRecruiter?.id === r.id ? "scale-110 grayscale-0" : "opacity-50 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-110"
                               }`}
                           />
                           {selectedRecruiter?.id === r.id && (

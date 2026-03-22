@@ -57,3 +57,40 @@ export function adjustForPersona(phase, recruiterProfile) {
   // Currently a no-op but kept for extensibility.
   return phase;
 }
+
+// Splits the resume and returns only the chunk relevant to the current phase
+export function getRelevantResumeChunk(resumeText, phase) {
+  if (!resumeText) return "";
+  
+  const lines = resumeText.split('\n');
+  let currentSection = "General";
+  const chunks = {
+    "General": [],
+    "Skills": [],
+    "Projects": [],
+    "Experience": [],
+    "Education": []
+  };
+
+  const sectionRegex = /^(?:#+\s*)?(skills|projects|experience|work history|employment|education|certifications)(?:\s*:)?(.*)$/i;
+
+  for (const line of lines) {
+    const match = line.trim().match(sectionRegex);
+    if (match) {
+      const secName = match[1].toLowerCase();
+      if (secName.includes("skill")) currentSection = "Skills";
+      else if (secName.includes("project")) currentSection = "Projects";
+      else if (secName.includes("experience") || secName.includes("work")) currentSection = "Experience";
+      else if (secName.includes("education")) currentSection = "Education";
+      else currentSection = "General";
+    }
+    chunks[currentSection].push(line);
+  }
+
+  if (phase === "Projects") return chunks["Projects"].join("\n");
+  if (phase === "Core Skills") return chunks["Skills"].join("\n");
+  if (phase === "Intro" || phase === "Experience") return chunks["Experience"].join("\n") || chunks["General"].join("\n");
+  
+  const targetChunk = chunks[phase === "Projects" ? "Projects" : phase === "Core Skills" ? "Skills" : "Experience"].join("\n");
+  return targetChunk.trim().length > 50 ? targetChunk : resumeText; 
+}

@@ -10,6 +10,7 @@ import {
   determineDifficulty,
   intentForPhase,
   adjustForPersona,
+  getRelevantResumeChunk,
 } from "./orchestrator-rules";
 import { questionPrompt, evaluationPrompt, answerFeedbackPrompt } from "./prompts";
 import { withRetry } from "@/lib/ai-retry";
@@ -67,9 +68,12 @@ export async function getNextQuestion({ sessionId, conversation = [], imageBase6
 
   const difficulty = determineDifficulty(turn);
   const intent = intentForPhase(phase);
+  
+  const relevantResumeChunk = getRelevantResumeChunk(session.resumeSnapshot?.content, phase);
 
   const prompt = questionPrompt({
     resumeSnapshot: session.resumeSnapshot || {},
+    relevantResumeChunk,
     conversation,
     phase,
     difficulty,

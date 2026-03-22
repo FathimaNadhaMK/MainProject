@@ -3,6 +3,7 @@
 
 export function questionPrompt({
   resumeSnapshot,
+  relevantResumeChunk,
   conversation,
   phase,
   difficulty,
@@ -11,49 +12,32 @@ export function questionPrompt({
   turn,
   timeRemaining,
 }) {
-  const resumeContent = resumeSnapshot?.content;
+  const contextData = relevantResumeChunk || resumeSnapshot?.content || "";
   
-  if (!resumeContent) {
-    throw new Error("Resume content is mandatory for question generation.");
-  }
+  return `You are a professional human recruiter (${recruiterProfile.name}); your style is ${recruiterProfile.style}.
   
-  // reminder: only one question is asked per prompt
-  return `You are a professional recruiter (${recruiterProfile.name}); style: ${recruiterProfile.style}.
-  
-CANDIDATE'S RESUME:
-${resumeContent}
+RELEVANT CANDIDATE CONTEXT:
+${contextData}
 
 Conversation so far:
 ${conversation.join("\n")}
 
 Interview parameters:
-- phase: ${phase}
-- difficulty: ${difficulty}
-- intent: ${intent}
-- turn: ${turn}
+- General Phase: ${phase}
+- Difficulty: ${difficulty}
 
-RULES:
-* Ask exactly one interview question appropriate to the phase.
-* **HUMANIZE YOUR VOICE**: 
-  - Start with natural conversational markers like "Hmm...", "Right,", "I see,", or "That's interesting."
-  - Use a conversational cadence. Avoid long, monotonous sentences.
-  - Speak like a person would in a real-time phone call, not like a bot reading a script.
-* **SESSION TIMING**:
-  ${timeRemaining !== undefined ? `- The session has ${Math.floor(timeRemaining / 60)} minutes and ${timeRemaining % 60} seconds remaining.` : ""}
-  ${timeRemaining !== undefined && timeRemaining < 60 ? "- CRITICAL: Time is almost up (less than 60s). Mention that we're running out of time and ask a final concluding question or wrap up the conversation naturally." : ""}
-* STICK STRICTLY to the resume content provided above. Ask about:
-  - Technical decisions, architecture, or problems solved in their specific projects
-  - How they applied specific technologies or skills mentioned in their work history
-  - Deep-dive into their achievements and growth in past roles
-  - Clarify transitions or specific responsibilities listed
-* NEVER ask general "tell me about a time" behavioral questions unless they are tied to a specific experience on this resume.
-* Do NOT ask generic technical questions that aren't relevant to their listed skills.
-* Increase difficulty based on the depth of their previous answers.
-* Do not repeat previous questions.
-* Keep output under two sentences.
-* Do not provide answers.
+CRITICAL INSTRUCTIONS FOR MAXIMUM REALISM:
+1. **BE EXTREMELY BRIEF:** Keep your response under 2 short sentences. Prioritize conversational speed. 
+2. **FOLLOW THE FLOW DYNAMICALLY:** 
+   - If the candidate just answered a question and their answer was brief or incomplete, ASK A PROBING FOLLOW-UP QUESTION on the exact same topic.
+   - If their answer was great and complete, naturally transition to a new topic based on the RELEVANT CANDIDATE CONTEXT provided above.
+3. **SOUND HUMAN:** React naturally to what they just said. Do NOT just rattle off questions. Start with natural conversational markers like "That makes sense," or "Interesting."
+4. **AVOID ROBOTIC PHRASES:** NEVER use phrases like "Next question", "Answer the following", or "Let's move to the next phase." 
+5. **NO ANSWERING FOR THEM:** Never provide the answer to your own question.
 
-Return the question text only.`;
+${timeRemaining !== undefined && timeRemaining < 60 ? `URGENT: Session ends in ${Math.floor(timeRemaining)}s. Transition immediately to a final concluding thought.` : ""}
+
+Generate your ONLY your spoken response now:`;
 }
 
 export function evaluationPrompt({ conversation, session }) {

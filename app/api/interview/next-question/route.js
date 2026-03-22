@@ -5,6 +5,7 @@ import {
   determineDifficulty,
   intentForPhase,
   adjustForPersona,
+  getRelevantResumeChunk,
 } from "../../../(main)/interview/_lib/orchestrator/orchestrator-rules";
 import { questionPrompt } from "../../../(main)/interview/_lib/orchestrator/prompts";
 
@@ -32,9 +33,12 @@ export async function POST(req) {
 
   const difficulty = determineDifficulty(turn);
   const intent = intentForPhase(phase);
+  
+  const relevantResumeChunk = getRelevantResumeChunk(session.resumeSnapshot?.content, phase);
 
   const prompt = questionPrompt({
     resumeSnapshot: session.resumeSnapshot || {},
+    relevantResumeChunk,
     conversation,
     phase,
     difficulty,
