@@ -8,15 +8,15 @@ datasource db {
 }
 
 model User {
-  id                    String              @id @default(uuid())
-  clerkUserId           String              @unique
-  email                 String              @unique
+  id                    String               @id @default(uuid())
+  clerkUserId           String               @unique
+  email                 String               @unique
   name                  String?
   imageUrl              String?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
   background            String?
-  certificationInterest Boolean?            @default(false)
+  certificationInterest Boolean?             @default(false)
   companySizePref       String?
   educationLevel        String?
   internshipInterest    String[]
@@ -166,38 +166,38 @@ model Assessment {
 }
 
 model Interview {
-  id               String   @id @default(cuid())
-  userId           String
-  title            String
-  type             String
-  company          String?
-  role             String?
-  difficulty       String?
+  id         String  @id @default(cuid())
+  userId     String
+  title      String
+  type       String
+  company    String?
+  role       String?
+  difficulty String?
 
   // configuration stored at creation; useful for reproduction or analysis
-  mode             String?      // "audio" | "video"
-  recruiterProfile Json?        // full persona object
-  config           Json?        // any additional settings (e.g. focusAreas)
-  focusAreas       Json?        // derived skill/topic priorities for interview
-  resumeSnapshot   Json?        // store resume content or profile fallback
+  mode             String? // "audio" | "video"
+  recruiterProfile Json? // full persona object
+  config           Json? // any additional settings (e.g. focusAreas)
+  focusAreas       Json? // derived skill/topic priorities for interview
+  resumeSnapshot   Json? // store resume content or profile fallback
 
   // conversation state (updated each turn)
-  conversation     Json?        // array of strings: ["Interviewer: ...","Candidate: ..."]
-  currentPhase     String?
+  conversation      Json? // array of strings: ["Interviewer: ...","Candidate: ..."]
+  currentPhase      String?
   currentDifficulty String?
-  turn             Int?         // next question number
+  turn              Int? // next question number
 
-  questions        Json[]
-  userResponses    Json?
-  idealAnswers     Json?
-  feedback         Json?
-  score            Float?
-  areasToImprove   String[]
-  duration         Int?
-  isCompleted      Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions      Json[]
+  userResponses  Json?
+  idealAnswers   Json?
+  feedback       Json?
+  score          Float?
+  areasToImprove String[]
+  duration       Int?
+  isCompleted    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([type])
@@ -352,19 +352,19 @@ model WeeklyInsight {
 
 // Achievement System (GitHub/LeetCode Style)
 model Achievement {
-  id              String            @id @default(cuid())
-  name            String            @unique
-  description     String
-  icon            String // Emoji or icon identifier
-  category        String // "streak", "completion", "skill", "special"
-  tier            String            @default("bronze") // "bronze", "silver", "gold", "platinum"
-  requirement     Json // Threshold and conditions
-  rarity          String            @default("common") // "common", "rare", "epic", "legendary"
-  xpReward        Int               @default(0)
-  isTimeLimited   Boolean           @default(false)
-  startDate       DateTime?
-  endDate         DateTime?
-  createdAt       DateTime          @default(now())
+  id               String            @id @default(cuid())
+  name             String            @unique
+  description      String
+  icon             String // Emoji or icon identifier
+  category         String // "streak", "completion", "skill", "special"
+  tier             String            @default("bronze") // "bronze", "silver", "gold", "platinum"
+  requirement      Json // Threshold and conditions
+  rarity           String            @default("common") // "common", "rare", "epic", "legendary"
+  xpReward         Int               @default(0)
+  isTimeLimited    Boolean           @default(false)
+  startDate        DateTime?
+  endDate          DateTime?
+  createdAt        DateTime          @default(now())
   userAchievements UserAchievement[]
 
   @@index([category])
@@ -373,15 +373,15 @@ model Achievement {
 }
 
 model UserAchievement {
-  id             String      @id @default(cuid())
-  userId         String
-  achievementId  String
-  earnedAt       DateTime    @default(now())
-  level          Int         @default(1) // For tiered achievements
-  progress       Float       @default(0) // Current progress towards next level
-  isDisplayed    Boolean     @default(true) // Show on profile
-  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  achievement    Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  id            String      @id @default(cuid())
+  userId        String
+  achievementId String
+  earnedAt      DateTime    @default(now())
+  level         Int         @default(1) // For tiered achievements
+  progress      Float       @default(0) // Current progress towards next level
+  isDisplayed   Boolean     @default(true) // Show on profile
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
 
   @@unique([userId, achievementId])
   @@index([userId])
@@ -391,20 +391,20 @@ model UserAchievement {
 
 // User Stats for Gamification
 model UserStats {
-  id                  String   @id @default(cuid())
-  userId              String   @unique
-  currentStreak       Int      @default(0)
-  longestStreak       Int      @default(0)
-  lastActivityDate    DateTime?
-  totalXP             Int      @default(0)
-  level               Int      @default(1)
-  weeklyGoalProgress  Float    @default(0)
-  tasksCompleted      Int      @default(0)
-  assessmentsTaken    Int      @default(0)
-  interviewsPracticed Int      @default(0)
-  certificationsEarned Int     @default(0)
-  updatedAt           DateTime @updatedAt
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  currentStreak        Int       @default(0)
+  longestStreak        Int       @default(0)
+  lastActivityDate     DateTime?
+  totalXP              Int       @default(0)
+  level                Int       @default(1)
+  weeklyGoalProgress   Float     @default(0)
+  tasksCompleted       Int       @default(0)
+  assessmentsTaken     Int       @default(0)
+  interviewsPracticed  Int       @default(0)
+  certificationsEarned Int       @default(0)
+  updatedAt            DateTime  @updatedAt
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([level])
@@ -434,25 +434,25 @@ model UserSkill {
 // ==========================================
 
 model JobListing {
-  id                String          @id @default(cuid())
-  title             String
-  company           String
-  location          String
-  experienceLevel   String          // "Intern", "Entry Level", "Junior", "Mid-Level", "Senior"
-  skillsRequired    String[]
-  industry          String
-  salaryRange       String?
-  description       String          @db.Text
-  applicationUrl    String
-  postedDate        DateTime
-  externalJobId     String          @unique
-  source            String          // "jsearch", "adzuna"
-  isRemote          Boolean         @default(false)
-  jobType           String?         // "full-time", "part-time", "contract", "internship"
-  isActive          Boolean         @default(true)
-  matchedUsers      UserJobMatch[]
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  id              String         @id @default(cuid())
+  title           String
+  company         String
+  location        String
+  experienceLevel String // "Intern", "Entry Level", "Junior", "Mid-Level", "Senior"
+  skillsRequired  String[]
+  industry        String
+  salaryRange     String?
+  description     String         @db.Text
+  applicationUrl  String
+  postedDate      DateTime
+  externalJobId   String         @unique
+  source          String // "jsearch", "adzuna"
+  isRemote        Boolean        @default(false)
+  jobType         String? // "full-time", "part-time", "contract", "internship"
+  isActive        Boolean        @default(true)
+  matchedUsers    UserJobMatch[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   @@index([industry, experienceLevel])
   @@index([isActive, postedDate])
@@ -460,24 +460,24 @@ model JobListing {
 }
 
 model UserJobMatch {
-  id              String      @id @default(cuid())
+  id              String     @id @default(cuid())
   userId          String
   jobId           String
-  matchScore      Float       // 0-100 overall weighted score
+  matchScore      Float // 0-100 overall weighted score
   skillMatchScore Float
   levelMatchScore Float
-  locationScore   Float       @default(0)
-  atsScore        Float       @default(0)
-  industryScore   Float       @default(0)
-  matchReasoning  Json?       // "Why this match?" structured data
-  gapAnalysis     Json?       // Skills gap + readiness boost data
-  status          String      @default("suggested") // suggested, saved, applied, rejected
+  locationScore   Float      @default(0)
+  atsScore        Float      @default(0)
+  industryScore   Float      @default(0)
+  matchReasoning  Json? // "Why this match?" structured data
+  gapAnalysis     Json? // Skills gap + readiness boost data
+  status          String     @default("suggested") // suggested, saved, applied, rejected
   viewedAt        DateTime?
   appliedAt       DateTime?
   savedAt         DateTime?
-  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  job             JobListing  @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  createdAt       DateTime    @default(now())
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job             JobListing @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  createdAt       DateTime   @default(now())
 
   @@unique([userId, jobId])
   @@index([userId, status])
@@ -485,33 +485,33 @@ model UserJobMatch {
 }
 
 model UserMatchPreference {
-  id                    String    @id @default(cuid())
-  userId                String    @unique
-  skillWeight           Float     @default(0.35)
-  levelWeight           Float     @default(0.25)
-  locationWeight        Float     @default(0.15)
-  atsWeight             Float     @default(0.15)
-  industryWeight        Float     @default(0.10)
-  preferredLocations    String[]
-  preferRemote          Boolean   @default(false)
-  savedCount            Int       @default(0)
-  appliedCount          Int       @default(0)
-  lastCalibration       DateTime?
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  updatedAt             DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  skillWeight        Float     @default(0.35)
+  levelWeight        Float     @default(0.25)
+  locationWeight     Float     @default(0.15)
+  atsWeight          Float     @default(0.15)
+  industryWeight     Float     @default(0.10)
+  preferredLocations String[]
+  preferRemote       Boolean   @default(false)
+  savedCount         Int       @default(0)
+  appliedCount       Int       @default(0)
+  lastCalibration    DateTime?
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt          DateTime  @updatedAt
 
   @@index([userId])
 }
 
 model ProjectEvaluation {
-  id          String   @id @default(cuid())
-  userId      String
-  weekNumber  Int
-  repoUrl     String
-  score       Int
-  report      Json
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  userId     String
+  weekNumber Int
+  repoUrl    String
+  score      Int
+  report     Json
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -534,5 +534,5 @@ model CoverLetter {
   content   String
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
