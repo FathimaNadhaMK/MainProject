@@ -37,8 +37,9 @@ export default function InterviewRoom({ sessionId }) {
   const [mode, setMode] = useState("audio");
   const [callDuration, setCallDuration] = useState(0);
   const [timeLeft, setTimeLeft] = useState(300);
-  const isProcessingRef = useRef(false);
   const [isProcessingUI, setIsProcessingUI] = useState(false);
+  const [userName, setUserName] = useState("");
+  const isProcessingRef = useRef(false);
   const lastInteractionRef = useRef(Date.now());
   const {
     transcript,
@@ -110,6 +111,7 @@ export default function InterviewRoom({ sessionId }) {
         if (cfg?.recruiterProfile?.gender) setRecruiterGender(cfg.recruiterProfile.gender);
         if (cfg?.mode) setMode(cfg.mode);
         if (cfg?.config?.duration) setTimeLeft(cfg.config.duration);
+        if (cfg?.user?.name) setUserName(cfg.user.name);
       } catch (e) {
         console.warn("could not load interview config", e);
       }
@@ -118,10 +120,12 @@ export default function InterviewRoom({ sessionId }) {
 
   useEffect(() => {
     if (!callStarted) return;
-    const initialQuestion = "Hello Fathima, are you ready? Let's start. Please introduce yourself and tell me about your background.";
+    const name = userName ? userName.split(" ")[0] : "";
+    const greeting = name ? `Hello ${name}, are you ready?` : "Hello, are you ready?";
+    const initialQuestion = `${greeting} Let's start. Please introduce yourself and tell me about your background.`;
     setCurrentQuestion(initialQuestion);
     speak(initialQuestion);
-  }, [callStarted]);
+  }, [callStarted, userName]);
 
   async function startCall() {
     try {

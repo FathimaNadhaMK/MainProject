@@ -137,6 +137,11 @@ export async function fetchInterviewSession(sessionId) {
       config: true,
       difficulty: true,
       resumeSnapshot: true,
+      user: {
+        select: {
+          name: true,
+        },
+      },
     },
   });
   if (!interview) throw new Error("Interview not found");
