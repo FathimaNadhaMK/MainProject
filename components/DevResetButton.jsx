@@ -9,8 +9,8 @@ import { toast } from "sonner";
 export default function DevResetButton() {
   const [loading, setLoading] = useState(false);
 
-  // Still strictly for development/testing
-  if (process.env.NODE_ENV !== "development") return null;
+  // Removed strict development check so it works after deployment
+  // if (process.env.NODE_ENV !== "development") return null;
 
   const handleReset = async () => {
     try {
